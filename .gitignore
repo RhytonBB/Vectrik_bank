@@ -1,0 +1,27 @@
+# Go
+bin/
+*.exe
+*.test
+*.out
+
+# Dependency directories
+vendor/
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env and secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Logs
+*.log
+logs/
