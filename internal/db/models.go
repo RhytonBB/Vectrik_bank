@@ -2,12 +2,10 @@ package db
 
 import (
     "time"
-
-    "github.com/google/uuid"
 )
 
 type User struct {
-    ID               uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+    ID               uint      `gorm:"primaryKey;autoIncrement"`
     FirstName        string    `gorm:"not null"`
     LastName         string    `gorm:"not null"`
     TelegramUsername string    `gorm:"unique;not null"`
@@ -16,13 +14,13 @@ type User struct {
     PasswordHash     *string
     IsRegistered     bool      `gorm:"default:false"`
     IsAdmin          bool      `gorm:"default:false"`
-    CreatedAt        time.Time
+    Balance          int       `gorm:"default:0;not null"`
     RegisteredAt     *time.Time
 }
 
 type Transaction struct {
-    ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-    UserID    uuid.UUID `gorm:"type:uuid;not null;index"`
+    ID        uint      `gorm:"primaryKey;autoIncrement"`
+    UserID    uint      `gorm:"not null;index"`
     User      User      `gorm:"foreignKey:UserID"`
     Amount    int       `gorm:"not null"`
     Reason    string    `gorm:"not null"`
@@ -31,7 +29,7 @@ type Transaction struct {
 }
 
 type Product struct {
-    ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+    ID          uint      `gorm:"primaryKey;autoIncrement"`
     Name        string    `gorm:"not null"`
     Description string
     Price       int       `gorm:"not null"`
@@ -43,10 +41,10 @@ type Product struct {
 }
 
 type Purchase struct {
-    ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-    UserID    uuid.UUID `gorm:"type:uuid;not null;index"`
+    ID        uint      `gorm:"primaryKey;autoIncrement"`
+    UserID    uint      `gorm:"not null;index"`
     User      User      `gorm:"foreignKey:UserID"`
-    ProductID uuid.UUID `gorm:"type:uuid;not null;index"`
+    ProductID uint      `gorm:"not null;index"`
     Product   Product   `gorm:"foreignKey:ProductID"`
     Quantity  int       `gorm:"not null"`
     Confirmed bool      `gorm:"default:true"`
@@ -54,35 +52,36 @@ type Purchase struct {
 }
 
 type LotParticipant struct {
-    ID                uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-    ProductID         uuid.UUID `gorm:"type:uuid;not null;index"`
+    ID                uint      `gorm:"primaryKey;autoIncrement"`
+    ProductID         uint      `gorm:"not null;index"`
     Product           Product   `gorm:"foreignKey:ProductID"`
-    UserID            uuid.UUID `gorm:"type:uuid;not null;index"`
+    UserID            uint      `gorm:"not null;index"`
     User              User      `gorm:"foreignKey:UserID"`
     ContributedAmount int       `gorm:"not null"`
     CreatedAt         time.Time
 }
 
 type Banner struct {
-    ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+    ID        uint      `gorm:"primaryKey;autoIncrement"`
     Title     string    `gorm:"not null"`
     ImageURL  string    `gorm:"not null"`
+    IsActive  bool      `gorm:"default:true"`
     CreatedAt time.Time
 }
 
 type Feedback struct {
-    ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-    UserID    uuid.UUID `gorm:"type:uuid;not null;index"`
+    ID        uint      `gorm:"primaryKey;autoIncrement"`
+    UserID    uint      `gorm:"not null;index"`
     User      User      `gorm:"foreignKey:UserID"`
     Message   string    `gorm:"not null"`
     CreatedAt time.Time
 }
 
 type AdminLog struct {
-    ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-    AdminID      uuid.UUID `gorm:"type:uuid;not null;index"`
+    ID           uint      `gorm:"primaryKey;autoIncrement"`
+    AdminID      uint      `gorm:"not null;index"`
     Admin        User      `gorm:"foreignKey:AdminID"`
-    TargetUserID uuid.UUID `gorm:"type:uuid;not null;index"`
+    TargetUserID uint      `gorm:"not null;index"`
     TargetUser   User      `gorm:"foreignKey:TargetUserID"`
     Action       string    `gorm:"not null;check:action IN ('reward','message','adjustment')"`
     Amount       *int
@@ -91,8 +90,8 @@ type AdminLog struct {
 }
 
 type MediaUpload struct {
-    ID         uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-    UploaderID uuid.UUID `gorm:"type:uuid;not null;index"`
+    ID         uint      `gorm:"primaryKey;autoIncrement"`
+    UploaderID uint      `gorm:"not null;index"`
     Uploader   User      `gorm:"foreignKey:UploaderID"`
     FileName   string    `gorm:"not null"`
     FileType   string    `gorm:"not null;check:file_type IN ('image','video','gif','zip','other')"`
@@ -101,8 +100,8 @@ type MediaUpload struct {
 }
 
 type Notification struct {
-    ID        uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-    UserID    uuid.UUID  `gorm:"type:uuid;not null;index"`
+    ID        uint       `gorm:"primaryKey;autoIncrement"`
+    UserID    uint       `gorm:"not null;index"`
     User      User       `gorm:"foreignKey:UserID"`
     Message   string     `gorm:"not null"`
     IsRead    bool       `gorm:"default:false"`

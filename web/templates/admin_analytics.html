@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Аналитика</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>📊 Аналитика</h1>
+  <form method="GET">
+    <label>Пользователь:</label>
+    <select name="user_id">
+      <option value="">Все</option>
+      {{range .Users}}
+        <option value="{{.ID}}" {{if eq $.FilterUserID .ID}}selected{{end}}>{{.FirstName}} {{.LastName}}</option>
+      {{end}}
+    </select>
+    <label>С:</label>
+    <input type="date" name="from" value="{{.FilterFrom}}">
+    <label>По:</label>
+    <input type="date" name="to" value="{{.FilterTo}}">
+    <button type="submit">Фильтровать</button>
+  </form>
+
+  <h2>Траты по пользователям</h2>
+  <canvas id="spendingChart" width="600" height="300"></canvas>
+  <script>
+    const ctx = document.getElementById('spendingChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: {{.ChartLabels}},
+        datasets: [{
+          label: 'Сумма трат',
+          data: {{.ChartData}},
+          backgroundColor: 'rgba(54, 162, 235, 0.5)'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } }
+      }
+    });
+  </script>
+</body>
+</html> 

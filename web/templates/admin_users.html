@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Модерация пользователей</title>
+</head>
+<body>
+  <h1>👥 Модерация пользователей</h1>
+
+  <p><a href="/admin/users/register">➕ Зарегистрировать нового пользователя</a></p>
+
+  <table border="1">
+    <tr>
+      <th>Telegram</th>
+      <th>Имя</th>
+      <th>Баланс</th>
+      <th>Действия</th>
+    </tr>
+    {{range .Users}}
+    <tr>
+      <td>{{.TelegramUsername}}</td>
+      <td>
+        <a href="/admin/users/{{.ID}}">
+          {{.FirstName}} {{.LastName}}
+        </a>
+      </td>
+      <td>{{.Balance}}</td>
+      <td>
+        <form method="POST" action="/admin/users">
+          <input type="hidden" name="user_id" value="{{.ID}}">
+          <input type="number" name="amount" required placeholder="Сумма (+/-)">
+          <input type="text" name="context" placeholder="Комментарий">
+          <button type="submit">Скорректировать</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+
+  <p><a href="/dashboard">← Назад</a></p>
+</body>
+</html>

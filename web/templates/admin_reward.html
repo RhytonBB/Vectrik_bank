@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Начисление Вектриков</title>
+</head>
+<body>
+  <h1>💸 Начисление Вектриков</h1>
+
+  <form method="GET" action="/admin/reward">
+    <label>Поиск пользователей:</label>
+    <input name="q" value="{{.Query}}" placeholder="Имя, Фамилия или логин" />
+    <button type="submit">Искать</button>
+  </form>
+
+  <form method="POST" action="/admin/reward">
+    <input type="hidden" name="q" value="{{.Query}}" />
+
+    <h3>Пользователи:</h3>
+    {{if .Users}}
+      {{range .Users}}
+        <label>
+          <input type="checkbox" name="user_ids" value="{{.ID}}" />
+          {{.FirstName}} {{.LastName}} ({{.TelegramUsername}})
+        </label><br/>
+      {{end}}
+    {{else}}
+      <p>Пользователи не найдены</p>
+    {{end}}
+
+    <br/>
+
+    <label>Сумма (Вектрики):</label><br/>
+    <input name="amount" type="number" min="1" required /><br/><br/>
+
+    <label>Причина:</label><br/>
+    <select name="reason" required>
+      <option value="">-- Выберите --</option>
+      <option value="drop">Drop</option>
+      <option value="активность">Активность</option>
+      <option value="награда">Награда</option>
+    </select><br/><br/>
+
+    <label>Комментарий (необязательно):</label><br/>
+    <textarea name="context" rows="3" cols="40"></textarea><br/><br/>
+
+    <button type="submit">Начислить</button>
+  </form>
+
+  <p><a href="/dashboard">Назад к панели</a></p>
+
+  {{if .Message}}<p style="color:green">{{.Message}}</p>{{end}}
+  {{if .Error}}<p style="color:red">{{.Error}}</p>{{end}}
+</body>
+</html>

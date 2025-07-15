@@ -1,0 +1,18 @@
+<h1>Регистрация нового пользователя</h1>
+<form method="POST">
+  <label>Имя:</label><br>
+  <input name="first_name" required><br><br>
+
+  <label>Фамилия:</label><br>
+  <input name="last_name" required><br><br>
+
+  <label>Telegram username:</label><br>
+  <input name="tg_username" required><br><br>
+
+  <button type="submit">Создать пользователя</button>
+</form>
+
+{{if .Message}}<p style="color:green">{{.Message}}</p>{{end}}
+{{if .Error}}<p style="color:red">{{.Error}}</p>{{end}}
+
+<p><a href="/admin/users">⬅ Назад</a></p>

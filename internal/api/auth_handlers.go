@@ -11,11 +11,9 @@ import (
 	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
 )
 
-// Глобальная переменная шаблонов
 var templates *template.Template
 
 func init() {
-	// Проверяем наличие шаблонов
 	files, err := filepath.Glob("web/templates/*.html")
 	if err != nil {
 		log.Fatalf("❌ Failed to find templates: %v", err)
@@ -43,24 +41,42 @@ func renderLogin(w http.ResponseWriter, errorMsg string) {
 	}
 }
 
-func renderDashboard(w http.ResponseWriter, isAdmin bool) {
-	log.Println("🔃 Rendering dashboard page...")
-	data := struct {
-		IsAdmin bool
-	}{
-		IsAdmin: isAdmin,
-	}
-
-	err := templates.ExecuteTemplate(w, "dashboard.html", data)
-	if err != nil {
-		log.Printf("❌ Template execution error: %v", err)
-		http.Error(w, "Ошибка загрузки панели", http.StatusInternalServerError)
+func renderDashboard(w http.ResponseWriter, isAdmin bool, balance int) {
+	if isAdmin {
+		data := struct {
+			Balance int
+		}{
+			Balance: balance,
+		}
+		err := templates.ExecuteTemplate(w, "admin_dashboard.html", data)
+		if err != nil {
+			log.Printf("❌ Template execution error (admin_dashboard): %v", err)
+			http.Error(w, "Ошибка загрузки панели администратора", http.StatusInternalServerError)
+		}
+	} else {
+		data := struct {
+			IsAdmin bool
+			Balance int
+		}{
+			IsAdmin: false,
+			Balance: balance,
+		}
+		err := templates.ExecuteTemplate(w, "dashboard.html", data)
+		if err != nil {
+			log.Printf("❌ Template execution error (dashboard): %v", err)
+			http.Error(w, "Ошибка загрузки панели пользователя", http.StatusInternalServerError)
+		}
 	}
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		renderLogin(w, "")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		renderLogin(w, "Ошибка обработки формы.")
 		return
 	}
 
@@ -86,12 +102,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.GenerateJWT(user.ID.String(), user.IsAdmin)
+	token, err := auth.GenerateJWT(user.ID, user.IsAdmin)
 	if err != nil {
 		log.Printf("❌ Ошибка генерации JWT: %v", err)
 		http.Error(w, "Ошибка авторизации", http.StatusInternalServerError)
 		return
 	}
+
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
@@ -125,5 +142,42 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderDashboard(w, isAdmin)
+	var userID uint
+	switch v := claims["user_id"].(type) {
+	case float64:
+		userID = uint(v)
+	case int:
+		userID = uint(v)
+	case uint:
+		userID = v
+	default:
+		log.Println("❌ Не удалось получить user_id из токена: неизвестный тип")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	var user db.User
+	if err := db.DB.Select("balance").Where("id = ?", userID).First(&user).Error; err != nil {
+		log.Printf("❌ Ошибка получения пользователя: %v", err)
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	renderDashboard(w, isAdmin, user.Balance)
+}
+
+
+func adminBroadcastHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Рассылка — в разработке"))
+}
+
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:   "token",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

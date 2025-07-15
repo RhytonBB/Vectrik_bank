@@ -10,7 +10,9 @@ import (
 
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
-func GenerateJWT(userID string, isAdmin bool) (string, error) {
+// Теперь userID — числовой тип (uint или int64).
+// Здесь лучше использовать int64, т.к. jwt.MapClaims поддерживает числа как float64.
+func GenerateJWT(userID uint, isAdmin bool) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":  userID,
 		"is_admin": isAdmin,
