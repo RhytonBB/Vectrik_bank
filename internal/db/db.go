@@ -29,6 +29,8 @@ func InitDB(dsn string) error {
         &AdminLog{},
         &MediaUpload{},
         &Notification{},
+        &BroadcastMessage{},
+        &BroadcastHistory{},
     )
     if err != nil {
         return err
