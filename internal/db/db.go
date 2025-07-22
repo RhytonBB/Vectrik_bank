@@ -30,7 +30,10 @@ func InitDB(dsn string) error {
         &Notification{},
         &BroadcastMessage{},
         &BroadcastHistory{},
+<<<<<<< HEAD
         &Setting{},
+=======
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
     )
     if err != nil {
         return err

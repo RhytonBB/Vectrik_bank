@@ -29,6 +29,11 @@ logs/
 # other
 CollectCode.ps1
 FullProjectCode.txt
+ADMIN_FUNCTIONALITY.md
+BULK_REGISTRATION_README.md
+todos.md
+secret.log
 web/
-vektrik-frontend/
 vectrik-tg-bot/
+vektrik-frontend/
+Лист Microsoft Excel.xlsx

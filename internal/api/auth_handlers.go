@@ -301,6 +301,7 @@ func MeAPIHandler(w http.ResponseWriter, r *http.Request) {
 		"balance": user.Balance,
 	})
 }
+<<<<<<< HEAD
 
 // API: Получить текущую тему пользователей
 func AdminThemeGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -356,3 +357,5 @@ func AdminThemeSetHandler(w http.ResponseWriter, r *http.Request) {
 	services.SetTheme(req.Theme)
 	w.WriteHeader(http.StatusOK)
 }
+=======
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916

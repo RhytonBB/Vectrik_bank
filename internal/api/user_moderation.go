@@ -11,8 +11,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
+<<<<<<< HEAD
 	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
 	"github.com/RhytonBB/vectrik-webbank/internal/services"
+=======
+	"gorm.io/gorm"
+	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 )
 
 var (
@@ -183,13 +188,26 @@ func AdminUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
+<<<<<<< HEAD
+=======
+		if req.FirstName == "" || req.LastName == "" || req.TelegramUsername == "" {
+			log.Println("[AdminUsersAPIHandler] missing fields")
+			http.Error(w, "Все поля обязательны", http.StatusBadRequest)
+			return
+		}
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		user := db.User{
 			FirstName: req.FirstName,
 			LastName: req.LastName,
 			TelegramUsername: req.TelegramUsername,
 		}
+<<<<<<< HEAD
 		if err := services.CreateUser(&user); err != nil {
 			log.Println("[AdminUsersAPIHandler] CreateUser error:", err)
+=======
+		if err := db.DB.Create(&user).Error; err != nil {
+			log.Println("[AdminUsersAPIHandler] DB create error:", err)
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 			http.Error(w, "Ошибка: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -215,8 +233,31 @@ func AdminUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+<<<<<<< HEAD
 	users, err := services.GetAllUsers()
 	if err != nil {
+=======
+	var users []db.User
+	q := r.URL.Query().Get("q")
+    minBalanceStr := r.URL.Query().Get("min_balance")
+    maxBalanceStr := r.URL.Query().Get("max_balance")
+	tx := db.DB.Order("first_name")
+	if q != "" {
+		like := "%" + q + "%"
+		tx = tx.Where("first_name ILIKE ? OR last_name ILIKE ? OR telegram_username ILIKE ?", like, like, like)
+	}
+    if minBalanceStr != "" {
+        if min, err := strconv.Atoi(minBalanceStr); err == nil {
+            tx = tx.Where("balance >= ?", min)
+        }
+    }
+    if maxBalanceStr != "" {
+        if max, err := strconv.Atoi(maxBalanceStr); err == nil {
+            tx = tx.Where("balance <= ?", max)
+        }
+    }
+	if err := tx.Find(&users).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
@@ -249,8 +290,13 @@ func AdminUserDetailAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := uint(userID64)
+<<<<<<< HEAD
 	user, err := services.GetUserByID(userID)
 	if err != nil {
+=======
+	var user db.User
+	if err := db.DB.First(&user, "id = ?", userID).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Пользователь не найден", http.StatusNotFound)
 		return
 	}
@@ -290,6 +336,7 @@ func AdminUserActivateAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+<<<<<<< HEAD
 	var errAct error
 	if req.IsActive {
 		errAct = services.ActivateUser(userID)
@@ -297,6 +344,9 @@ func AdminUserActivateAPIHandler(w http.ResponseWriter, r *http.Request) {
 		errAct = services.DeactivateUser(userID)
 	}
 	if errAct != nil {
+=======
+	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_active", req.IsActive).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -335,7 +385,11 @@ func AdminUserAdminAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+<<<<<<< HEAD
 	if err := services.SetUserAdmin(userID, req.IsAdmin); err != nil {
+=======
+	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_admin", req.IsAdmin).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -367,7 +421,11 @@ func AdminUserBanAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := uint(userID64)
+<<<<<<< HEAD
 	if err := services.BanUser(userID); err != nil {
+=======
+	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_banned", true).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -399,7 +457,11 @@ func AdminUserUnbanAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := uint(userID64)
+<<<<<<< HEAD
 	if err := services.UnbanUser(userID); err != nil {
+=======
+	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_banned", false).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -461,14 +523,22 @@ func AdminUserEditDeleteAPIHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			updates["password_hash"] = hashStr
 		}
+<<<<<<< HEAD
 		if err := services.UpdateUser(userID, updates); err != nil {
+=======
+		if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 			http.Error(w, "Ошибка обновления пользователя: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		return
 	case http.MethodDelete:
+<<<<<<< HEAD
 		if err := services.DeleteUser(userID); err != nil {
+=======
+		if err := db.DB.Delete(&db.User{}, userID).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 			http.Error(w, "Ошибка удаления пользователя: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -478,6 +548,7 @@ func AdminUserEditDeleteAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 	}
 }
+<<<<<<< HEAD
 
 func AdminUserAdjustBalanceAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
@@ -527,3 +598,5 @@ func AdminUserAdjustBalanceAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
+=======
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916

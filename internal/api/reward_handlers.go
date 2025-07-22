@@ -159,8 +159,21 @@ func AdminRewardUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
+<<<<<<< HEAD
 	users, err := services.RewardSearchUsers(query)
 	if err != nil {
+=======
+	var users []db.User
+	tx := db.DB.Limit(20).Order("first_name")
+	if query != "" {
+		likeQuery := "%" + query + "%"
+		tx = tx.Where(
+			"first_name ILIKE ? OR last_name ILIKE ? OR telegram_username ILIKE ?",
+			likeQuery, likeQuery, likeQuery,
+		)
+	}
+	if err := tx.Find(&users).Error; err != nil {
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
@@ -207,9 +220,64 @@ func AdminRewardAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+<<<<<<< HEAD
 	err = services.RewardUsers(req.UserIDs, req.Amount, req.Reason, req.Context, adminID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+=======
+	if len(req.UserIDs) == 0 || req.Amount <= 0 || req.Reason == "" {
+		http.Error(w, "Все поля обязательны", http.StatusBadRequest)
+		return
+	}
+	validReasons := map[string]bool{
+		"drop":       true,
+		"активность": true,
+		"награда":    true,
+	}
+	if !validReasons[req.Reason] {
+		http.Error(w, "Некорректная причина", http.StatusBadRequest)
+		return
+	}
+	tx := db.DB.Begin()
+	for _, userID := range req.UserIDs {
+		transaction := db.Transaction{
+			UserID:    userID,
+			Amount:    req.Amount,
+			Reason:    req.Reason,
+			Source:    "reward",
+			CreatedAt: time.Now(),
+		}
+		if err := tx.Create(&transaction).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Ошибка при создании транзакции", http.StatusInternalServerError)
+			return
+		}
+		if err := tx.Model(&db.User{}).
+			Where("id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance + ?", req.Amount)).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Ошибка при обновлении баланса", http.StatusInternalServerError)
+			return
+		}
+		adminLog := db.AdminLog{
+			AdminID:      adminID,
+			TargetUserID: userID,
+			Action:       "reward",
+			Amount:       &req.Amount,
+			CreatedAt:    time.Now(),
+		}
+		if req.Context != "" {
+			adminLog.Context = &req.Context
+		}
+		if err := tx.Create(&adminLog).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Ошибка при записи лога", http.StatusInternalServerError)
+			return
+		}
+	}
+	if err := tx.Commit().Error; err != nil {
+		http.Error(w, "Ошибка при сохранении данных", http.StatusInternalServerError)
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

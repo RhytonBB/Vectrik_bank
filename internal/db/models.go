@@ -69,6 +69,17 @@ type Banner struct {
     ImageURL  string    `gorm:"not null" json:"image_url"`
     IsActive  bool      `gorm:"default:true" json:"is_active"`
     CreatedAt time.Time `json:"created_at"`
+<<<<<<< HEAD
+=======
+}
+
+type Feedback struct {
+    ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+    UserID    uint      `gorm:"not null;index" json:"user_id"`
+    User      User      `gorm:"foreignKey:UserID" json:"user"`
+    Message   string    `gorm:"not null" json:"message"`
+    CreatedAt time.Time `json:"created_at"`
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 }
 
 type AdminLog struct {
@@ -129,9 +140,12 @@ type BroadcastHistory struct {
     Status            string    `gorm:"not null;check:status IN ('sent','failed')" json:"status"`
     ErrorMessage      *string   `json:"error_message"`
     SentAt            time.Time `json:"sent_at"`
+<<<<<<< HEAD
 }
 
 type Setting struct {
     Key   string `gorm:"primaryKey;size:64" json:"key"`
     Value string `gorm:"not null" json:"value"`
+=======
+>>>>>>> 7259f56d86e51521de5028adf64898f696632916
 }
