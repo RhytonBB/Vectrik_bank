@@ -1,18 +1,18 @@
 package api
 
 import (
-	"fmt"
+	"encoding/json"
 	"html/template"
-	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
+	"github.com/RhytonBB/vectrik-webbank/internal/services"
+	"github.com/gorilla/mux"
 )
 
 const mediaDir = "internal/media/"
@@ -33,72 +33,41 @@ func AdminBannersHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Доступ запрещён", http.StatusForbidden)
 		return
 	}
-
 	var message, errMsg string
-
 	if r.Method == http.MethodPost {
-		r.ParseMultipartForm(10 << 20) // 10 МБ
-	
-action := r.FormValue("action")
+		r.ParseMultipartForm(10 << 20)
+		action := r.FormValue("action")
 		bannerID := r.FormValue("banner_id")
-
 		if action == "delete" && bannerID != "" {
-			if err := deleteBanner(bannerID); err != nil {
+			err := services.DeleteBannerByID(bannerID)
+			if err != nil {
 				errMsg = "Ошибка удаления баннера: " + err.Error()
 			} else {
 				message = "Баннер удалён"
 			}
 		} else if action == "toggle" && bannerID != "" {
-			if err := toggleBanner(bannerID); err != nil {
+			err := services.ToggleBannerByID(bannerID)
+			if err != nil {
 				errMsg = "Ошибка изменения статуса: " + err.Error()
 			} else {
 				message = "Статус баннера изменён"
 			}
 		} else if r.MultipartForm != nil && r.MultipartForm.File != nil && len(r.MultipartForm.File["file"]) > 0 {
-			// Загрузка нового баннера
 			title := r.FormValue("title")
 			fileHeader := r.MultipartForm.File["file"][0]
 			if title == "" || fileHeader == nil {
 				errMsg = "Заполните все поля и выберите файл"
 			} else {
-				file, err := fileHeader.Open()
+				_, err = services.UploadAndCreateBanner(title, fileHeader)
 				if err != nil {
-					errMsg = "Ошибка открытия файла: " + err.Error()
+					errMsg = "Ошибка загрузки баннера: " + err.Error()
 				} else {
-					ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-					fileName := fmt.Sprintf("banner_%d%s", makeTimestamp(), ext)
-					filePath := filepath.Join(mediaDir, fileName)
-					os.MkdirAll(mediaDir, 0755)
-					out, err := os.Create(filePath)
-					if err != nil {
-						errMsg = "Ошибка сохранения файла: " + err.Error()
-					} else {
-						_, err = io.Copy(out, file)
-						out.Close()
-						file.Close()
-						if err != nil {
-							errMsg = "Ошибка копирования файла: " + err.Error()
-						} else {
-							banner := db.Banner{
-								Title:    title,
-								ImageURL: "/" + filePath,
-								CreatedAt: makeNow(),
-							}
-							if err := db.DB.Create(&banner).Error; err != nil {
-								errMsg = "Ошибка сохранения баннера: " + err.Error()
-							} else {
-								message = "Баннер успешно загружен"
-							}
-						}
-					}
+					message = "Баннер успешно загружен"
 				}
 			}
 		}
 	}
-
-	// GET или после POST — показать список баннеров
-	var banners []db.Banner
-	db.DB.Order("created_at desc").Find(&banners)
+	banners, _ := services.GetAllBanners()
 	tmpl := template.Must(template.ParseFiles("web/templates/admin_banners.html"))
 	tmpl.Execute(w, struct {
 		Banners []db.Banner
@@ -109,6 +78,128 @@ action := r.FormValue("action")
 		Message: message,
 		Error:   errMsg,
 	})
+}
+
+func AdminBannersAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	isAdmin, ok := claims["is_admin"].(bool)
+	if !ok || !isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if r.Method == http.MethodPost {
+		title := r.FormValue("title")
+		files := r.MultipartForm.File["file"]
+		if title == "" || len(files) == 0 || files[0] == nil {
+			http.Error(w, "Заполните все поля и выберите файл", http.StatusBadRequest)
+			return
+		}
+		banner, err := services.UploadAndCreateBanner(title, files[0])
+		if err != nil {
+			http.Error(w, "Ошибка загрузки баннера: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(banner)
+		return
+	}
+	banners, err := services.GetAllBanners()
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(banners)
+}
+
+func AdminBannerActivateAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	isAdmin, ok := claims["is_admin"].(bool)
+	if !ok || !isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	vars := mux.Vars(r)
+	bannerIDStr := vars["id"]
+	var req struct {
+		IsActive bool `json:"is_active"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	err = services.SetBannerActiveStatus(bannerIDStr, req.IsActive)
+	if err != nil {
+		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func AdminBannerDetailAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	isAdmin, ok := claims["is_admin"].(bool)
+	if !ok || !isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	vars := mux.Vars(r)
+	bannerIDStr := vars["id"]
+	if r.Method == http.MethodPut {
+		var req struct {
+			Title    string  `json:"title"`
+			ImageURL *string `json:"image_url"`
+			IsActive *bool   `json:"is_active"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		err := services.UpdateBannerByID(bannerIDStr, req.Title, req.ImageURL, req.IsActive)
+		if err != nil {
+			http.Error(w, "Ошибка обновления баннера: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method == http.MethodDelete {
+		err := services.DeleteBannerByID(bannerIDStr)
+		if err != nil {
+			http.Error(w, "Ошибка удаления баннера: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 }
 
 func deleteBanner(idStr string) error {

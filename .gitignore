@@ -29,3 +29,6 @@ logs/
 # other
 CollectCode.ps1
 FullProjectCode.txt
+web/
+vektrik-frontend/
+vectrik-tg-bot/

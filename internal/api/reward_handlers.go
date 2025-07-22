@@ -1,16 +1,16 @@
 package api
 
 import (
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
-	"gorm.io/gorm"
+	"github.com/RhytonBB/vectrik-webbank/internal/services"
 )
 
 var rewardTemplate *template.Template
@@ -68,24 +68,12 @@ func AdminRewardHandler(w http.ResponseWriter, r *http.Request) {
 
 func handleRewardGet(w http.ResponseWriter, r *http.Request) {
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
-
-	var users []db.User
-	tx := db.DB.Limit(20).Order("first_name")
-
-	if query != "" {
-		likeQuery := "%" + query + "%"
-		tx = tx.Where(
-			"first_name ILIKE ? OR last_name ILIKE ? OR telegram_username ILIKE ?",
-			likeQuery, likeQuery, likeQuery,
-		)
-	}
-
-	if err := tx.Find(&users).Error; err != nil {
+	users, err := services.RewardSearchUsers(query)
+	if err != nil {
 		log.Printf("❌ Ошибка выборки пользователей: %v", err)
 		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
 		return
 	}
-
 	data := struct {
 		Users   []db.User
 		Query   string
@@ -95,7 +83,6 @@ func handleRewardGet(w http.ResponseWriter, r *http.Request) {
 		Users: users,
 		Query: query,
 	}
-
 	if err := rewardTemplate.Execute(w, data); err != nil {
 		log.Printf("❌ Ошибка рендера шаблона: %v", err)
 	}
@@ -106,99 +93,33 @@ func handleRewardPost(w http.ResponseWriter, r *http.Request, adminID uint) {
 		http.Error(w, "Неверные данные формы", http.StatusBadRequest)
 		return
 	}
-
-	userIDs := r.Form["user_ids"]
-	if len(userIDs) == 0 {
+	userIDsStr := r.Form["user_ids"]
+	if len(userIDsStr) == 0 {
 		renderRewardWithError(w, "Выберите хотя бы одного пользователя")
 		return
 	}
-
+	var userIDs []uint
+	for _, s := range userIDsStr {
+		id, err := strconv.ParseUint(s, 10, 64)
+		if err != nil {
+			renderRewardWithError(w, "Некорректный ID пользователя")
+			return
+		}
+		userIDs = append(userIDs, uint(id))
+	}
 	amountStr := r.FormValue("amount")
 	reason := r.FormValue("reason")
 	context := r.FormValue("context")
-
-	if amountStr == "" || reason == "" {
-		renderRewardWithError(w, "Заполните все обязательные поля")
-		return
-	}
-
 	amount, err := strconv.Atoi(amountStr)
 	if err != nil || amount <= 0 {
 		renderRewardWithError(w, "Некорректная сумма")
 		return
 	}
-
-	validReasons := map[string]bool{
-		"drop":       true,
-		"активность": true,
-		"награда":    true,
-	}
-	if !validReasons[reason] {
-		renderRewardWithError(w, "Некорректная причина")
+	err = services.RewardUsers(userIDs, amount, reason, context, adminID)
+	if err != nil {
+		renderRewardWithError(w, err.Error())
 		return
 	}
-
-	tx := db.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			log.Println("Panic в handleRewardPost:", r)
-		}
-	}()
-
-	for _, userIDStr := range userIDs {
-		userID64, err := strconv.ParseUint(userIDStr, 10, 64)
-		if err != nil {
-			tx.Rollback()
-			renderRewardWithError(w, "Некорректный ID пользователя")
-			return
-		}
-		userID := uint(userID64)
-
-		transaction := db.Transaction{
-			UserID:    userID,
-			Amount:    amount,
-			Reason:    reason,
-			Source:    "reward",
-			CreatedAt: time.Now(),
-		}
-		if err := tx.Create(&transaction).Error; err != nil {
-			tx.Rollback()
-			renderRewardWithError(w, "Ошибка при создании транзакции")
-			return
-		}
-
-		if err := tx.Model(&db.User{}).
-			Where("id = ?", userID).
-			UpdateColumn("balance", gorm.Expr("balance + ?", amount)).Error; err != nil {
-			tx.Rollback()
-			renderRewardWithError(w, "Ошибка при обновлении баланса")
-			return
-		}
-
-		adminLog := db.AdminLog{
-			AdminID:      adminID,
-			TargetUserID: userID,
-			Action:       "reward",
-			Amount:       &amount,
-			CreatedAt:    time.Now(),
-		}
-		if context != "" {
-			adminLog.Context = &context
-		}
-
-		if err := tx.Create(&adminLog).Error; err != nil {
-			tx.Rollback()
-			renderRewardWithError(w, "Ошибка при записи лога")
-			return
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		renderRewardWithError(w, "Ошибка при сохранении данных")
-		return
-	}
-
 	renderRewardWithMessage(w, "Вектрики успешно начислены")
 }
 
@@ -218,4 +139,79 @@ func renderRewardWithMessage(w http.ResponseWriter, msg string) {
 		Message: msg,
 	}
 	rewardTemplate.Execute(w, data)
+}
+
+// API: Поиск пользователей для reward в JSON
+func AdminRewardUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	isAdmin, ok := claims["is_admin"].(bool)
+	if !ok || !isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	users, err := services.RewardSearchUsers(query)
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+// API: Начисление вектриков через JSON
+func AdminRewardAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	isAdmin, ok := claims["is_admin"].(bool)
+	if !ok || !isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	var adminID uint
+	switch v := claims["user_id"].(type) {
+	case float64:
+		adminID = uint(v)
+	case int:
+		adminID = uint(v)
+	case uint:
+		adminID = v
+	default:
+		http.Error(w, "Invalid admin ID", http.StatusInternalServerError)
+		return
+	}
+	var req struct {
+		UserIDs []uint `json:"user_ids"`
+		Amount  int    `json:"amount"`
+		Reason  string `json:"reason"`
+		Context string `json:"context"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	err = services.RewardUsers(req.UserIDs, req.Amount, req.Reason, req.Context, adminID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"success": true}`))
 }

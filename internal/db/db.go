@@ -25,10 +25,12 @@ func InitDB(dsn string) error {
         &Purchase{},
         &LotParticipant{},
         &Banner{},
-        &Feedback{},
         &AdminLog{},
         &MediaUpload{},
         &Notification{},
+        &BroadcastMessage{},
+        &BroadcastHistory{},
+        &Setting{},
     )
     if err != nil {
         return err
