@@ -116,6 +116,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true, // обязательно для https
+		SameSite: http.SameSiteNoneMode, // обязательно для кросс-доменных cookie
 	})
 
 	if isJSON {
