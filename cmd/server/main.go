@@ -52,7 +52,7 @@ func main() {
 	}
 
 	handler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:8080", "http://localhost:8081", "http://localhost:5173", "http://localhost:3000"},
+		AllowedOrigins:   []string{"http://localhost:8080", "http://localhost:8081", "http://localhost:5173", "http://localhost:3000", "https://vectrik-bank-front.onrender.com"},
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
