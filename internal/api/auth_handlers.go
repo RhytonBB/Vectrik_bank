@@ -118,6 +118,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true, // обязательно для https
 		SameSite: http.SameSiteNoneMode, // обязательно для кросс-доменных cookie
+		MaxAge:   60 * 60 * 24, // 1 день
 	})
 
 	if isJSON {
