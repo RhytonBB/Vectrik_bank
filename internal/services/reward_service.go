@@ -3,8 +3,11 @@ package services
 import (
 	"errors"
 	"time"
+	"strings"
+	"fmt"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
 	"gorm.io/gorm"
+	"golang.org/x/text/unicode/norm"
 )
 
 func RewardSearchUsers(query string) ([]db.User, error) {
@@ -23,11 +26,32 @@ func RewardSearchUsers(query string) ([]db.User, error) {
 	return users, nil
 }
 
+func GetValidRewardReasons() map[string]bool {
+	return map[string]bool{
+		"+5 за активность в группе Вектора": true,
+		"+10 за отличный вопрос или активность на блоке": true,
+		"+15 за конструктивную ОС": true,
+		"+20 за участие в задании на ИС по своей инициативе": true,
+		"+25 за отличную игротехнику": true,
+		"+30 за победу в соревнованиях": true,
+		"+35 за что-то внезапное, креативное и хорошее": true,
+		"+40 за преодоление себя": true,
+		"+50 за высокий результат на экзамене": true,
+		"+245 за прохождение вузовской Школы кураторов": true,
+	}
+}
+
 func RewardUsers(userIDs []uint, amount int, reason, context string, adminID uint) error {
+	reason = strings.TrimSpace(reason)
+	reason = norm.NFC.String(reason)
+	fmt.Printf("REWARD REASON: '%s' (len=%d, bytes=%v)\n", reason, len(reason), []byte(reason))
 	if len(userIDs) == 0 || amount <= 0 || reason == "" {
 		return errors.New("Все поля обязательны")
 	}
-	validReasons := map[string]bool{"drop": true, "активность": true, "награда": true}
+	validReasons := GetValidRewardReasons()
+	for k := range validReasons {
+		fmt.Printf("VALID: '%s' (len=%d, bytes=%v)\n", k, len(k), []byte(k))
+	}
 	if !validReasons[reason] {
 		return errors.New("Некорректная причина")
 	}

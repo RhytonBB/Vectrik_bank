@@ -18,7 +18,7 @@ func RegisterRoutes() {
 
 	router.HandleFunc("/admin/banners", AdminBannersHandler)
 	router.HandleFunc("/admin/products", AdminProductsHandler)
-	router.HandleFunc("/admin/analytics", AdminAnalyticsHandler)
+	router.HandleFunc("/admin/analytics", AdminAnalyticsAPIHandler)
 	// USERS
 	router.HandleFunc("/api/admin/users", AdminUsersAPIHandler).Methods("GET", "POST")
 	router.HandleFunc("/api/admin/users/{id}", AdminUserDetailAPIHandler).Methods("GET")
@@ -27,10 +27,7 @@ func RegisterRoutes() {
 	router.HandleFunc("/api/admin/users/{id}/ban", AdminUserBanAPIHandler).Methods("POST")
 	router.HandleFunc("/api/admin/users/{id}/unban", AdminUserUnbanAPIHandler).Methods("POST")
 	router.HandleFunc("/api/admin/users/{id}", AdminUserEditDeleteAPIHandler).Methods("PUT", "DELETE")
-<<<<<<< HEAD
 	router.HandleFunc("/api/admin/users/adjust_balance", AdminUserAdjustBalanceAPIHandler).Methods("POST")
-=======
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 	// BULK USERS
 	router.HandleFunc("/api/admin/users/bulk/preview", AdminBulkUsersPreviewAPIHandler).Methods("POST")
 	router.HandleFunc("/api/admin/users/bulk", AdminBulkUsersRegisterAPIHandler).Methods("POST")
@@ -66,6 +63,7 @@ func RegisterRoutes() {
 
 	router.HandleFunc("/api/admin/theme", AdminThemeGetHandler).Methods("GET")
 	router.HandleFunc("/api/admin/theme", AdminThemeSetHandler).Methods("POST")
+	router.HandleFunc("/api/admin/groups", AdminGroupsAPIHandler).Methods("GET", "POST")
 
 	http.Handle("/", router)
 }

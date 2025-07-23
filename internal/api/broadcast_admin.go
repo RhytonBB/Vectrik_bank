@@ -16,10 +16,7 @@ import (
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
 	"github.com/gorilla/mux"
-<<<<<<< HEAD
 	"github.com/RhytonBB/vectrik-webbank/internal/services"
-=======
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 )
 
 // API: Создать broadcast сообщение
@@ -39,10 +36,6 @@ func AdminBroadcastAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-<<<<<<< HEAD
-=======
-
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 	var adminID uint
 	switch v := claims["user_id"].(type) {
 	case float64:
@@ -55,10 +48,6 @@ func AdminBroadcastAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid admin ID", http.StatusInternalServerError)
 		return
 	}
-<<<<<<< HEAD
-=======
-
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 	if r.Method == http.MethodPost {
 		var req struct {
 			Text          string   `json:"text"`
@@ -71,70 +60,18 @@ func AdminBroadcastAPIHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
-<<<<<<< HEAD
 		broadcast, err := services.CreateBroadcastMessage(adminID, req.Text, req.MediaURL, req.MediaType, req.TargetType, req.TargetUserIDs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-=======
-
-		if req.Text == "" {
-			http.Error(w, "Текст сообщения обязателен", http.StatusBadRequest)
-			return
-		}
-
-		if req.TargetType != "all" && req.TargetType != "registered" && req.TargetType != "manual" {
-			http.Error(w, "Некорректный тип целевой аудитории", http.StatusBadRequest)
-			return
-		}
-
-		if req.TargetType == "manual" && len(req.TargetUserIDs) == 0 {
-			http.Error(w, "Выберите хотя бы одного пользователя", http.StatusBadRequest)
-			return
-		}
-
-		// Сериализуем массив ID в JSON строку
-		targetUserIDsJSON, err := json.Marshal(req.TargetUserIDs)
-		if err != nil {
-			http.Error(w, "Ошибка обработки списка пользователей", http.StatusInternalServerError)
-			return
-		}
-
-		broadcast := db.BroadcastMessage{
-			AdminID:       adminID,
-			Text:          req.Text,
-			MediaURL:      req.MediaURL,
-			MediaType:     req.MediaType,
-			TargetType:    req.TargetType,
-			TargetUserIDs: string(targetUserIDsJSON),
-			Status:        "pending",
-			CreatedAt:     time.Now(),
-		}
-
-		if err := db.DB.Create(&broadcast).Error; err != nil {
-			http.Error(w, "Ошибка создания сообщения: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Запускаем отправку в фоне
-		go sendBroadcastMessage(broadcast.ID)
-
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(broadcast)
 		return
 	}
-<<<<<<< HEAD
 	if r.Method == http.MethodGet {
 		broadcasts, err := services.GetAllBroadcasts()
 		if err != nil {
-=======
-
-	if r.Method == http.MethodGet {
-		var broadcasts []db.BroadcastMessage
-		if err := db.DB.Preload("Admin").Order("created_at desc").Find(&broadcasts).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 			http.Error(w, "DB error", http.StatusInternalServerError)
 			return
 		}
@@ -142,17 +79,9 @@ func AdminBroadcastAPIHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(broadcasts)
 		return
 	}
-<<<<<<< HEAD
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
-=======
-
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-}
-
-// API: Получить историю отправки конкретного сообщения
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 func AdminBroadcastHistoryAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {
@@ -169,10 +98,6 @@ func AdminBroadcastHistoryAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-<<<<<<< HEAD
-=======
-
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 	vars := mux.Vars(r)
 	broadcastIDStr := vars["id"]
 	broadcastID, err := strconv.Atoi(broadcastIDStr)
@@ -180,29 +105,15 @@ func AdminBroadcastHistoryAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Некорректный ID", http.StatusBadRequest)
 		return
 	}
-<<<<<<< HEAD
 	history, err := services.GetBroadcastHistory(uint(broadcastID))
 	if err != nil {
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
-=======
-
-	var history []db.BroadcastHistory
-	if err := db.DB.Preload("User").Where("broadcast_id = ?", broadcastID).Order("sent_at desc").Find(&history).Error; err != nil {
-		http.Error(w, "DB error", http.StatusInternalServerError)
-		return
-	}
-
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(history)
 }
 
-<<<<<<< HEAD
-=======
-// API: Получить список пользователей для выбора
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 func AdminBroadcastUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {
@@ -219,37 +130,12 @@ func AdminBroadcastUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-<<<<<<< HEAD
 	targetType := r.URL.Query().Get("type")
 	users, err := services.GetBroadcastUsers(targetType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-=======
-
-	targetType := r.URL.Query().Get("type")
-	var users []db.User
-
-	query := db.DB.Where("telegram_id IS NOT NULL")
-	
-	switch targetType {
-	case "registered":
-		query = query.Where("is_registered = ?", true)
-	case "all":
-		// Все пользователи с telegram_id
-		break
-	default:
-		http.Error(w, "Некорректный тип", http.StatusBadRequest)
-		return
-	}
-
-	if err := query.Order("first_name").Find(&users).Error; err != nil {
-		http.Error(w, "DB error", http.StatusInternalServerError)
-		return
-	}
-
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }

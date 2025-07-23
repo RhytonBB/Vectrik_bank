@@ -10,13 +10,14 @@ import (
 )
 
 type BulkUser struct {
-	FirstName        string
-	LastName         string
-	TelegramUsername string
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	TelegramUsername string `json:"telegram_username"`
+	GroupID          *uint  `json:"group_id"`
 }
 
 type BulkPreviewResponse struct {
-	Users []BulkUser
+	Users []BulkUser `json:"users"`
 }
 
 type BulkRegisterResponse struct {
@@ -56,6 +57,7 @@ func BulkRegisterUsers(users []BulkUser) BulkRegisterResponse {
 			LastName:         user.LastName,
 			TelegramUsername: user.TelegramUsername,
 			IsActive:         true,
+			GroupID:          user.GroupID,
 		}
 		if err := db.DB.Create(&newUser).Error; err != nil {
 			errors = append(errors, fmt.Sprintf("Row %d: %s", i+1, err.Error()))
@@ -77,7 +79,7 @@ func ParseCSVFile(file io.Reader) ([]BulkUser, error) {
 		return nil, fmt.Errorf("file must contain at least header and one data row")
 	}
 	headers := records[0]
-	firstNameIdx, lastNameIdx, telegramIdx := -1, -1, -1
+	firstNameIdx, lastNameIdx, telegramIdx, groupIdx := -1, -1, -1, -1
 	for i, header := range headers {
 		h := strings.ToLower(strings.TrimSpace(header))
 		switch h {
@@ -87,6 +89,8 @@ func ParseCSVFile(file io.Reader) ([]BulkUser, error) {
 			lastNameIdx = i
 		case "telegram", "telegram username", "username", "tg", "telegram_username":
 			telegramIdx = i
+		case "group_id", "группа", "group":
+			groupIdx = i
 		}
 	}
 	if firstNameIdx == -1 || lastNameIdx == -1 || telegramIdx == -1 {
@@ -97,10 +101,22 @@ func ParseCSVFile(file io.Reader) ([]BulkUser, error) {
 		if len(record) <= firstNameIdx || len(record) <= lastNameIdx || len(record) <= telegramIdx {
 			continue
 		}
+		var groupID *uint
+		if groupIdx != -1 && len(record) > groupIdx {
+			groupStr := strings.TrimSpace(record[groupIdx])
+			if groupStr != "" {
+				var gid uint
+				_, err := fmt.Sscanf(groupStr, "%d", &gid)
+				if err == nil {
+					groupID = &gid
+				}
+			}
+		}
 		user := BulkUser{
 			FirstName:        strings.TrimSpace(record[firstNameIdx]),
 			LastName:         strings.TrimSpace(record[lastNameIdx]),
 			TelegramUsername: strings.TrimSpace(record[telegramIdx]),
+			GroupID:          groupID,
 		}
 		if strings.HasPrefix(user.TelegramUsername, "@") {
 			user.TelegramUsername = user.TelegramUsername[1:]
@@ -129,7 +145,7 @@ func ParseExcelFile(file io.Reader) ([]BulkUser, error) {
 		return nil, fmt.Errorf("file must contain at least header and one data row")
 	}
 	headers := rows[0]
-	firstNameIdx, lastNameIdx, telegramIdx := -1, -1, -1
+	firstNameIdx, lastNameIdx, telegramIdx, groupIdx := -1, -1, -1, -1
 	for i, header := range headers {
 		h := strings.ToLower(strings.TrimSpace(header))
 		switch h {
@@ -139,6 +155,8 @@ func ParseExcelFile(file io.Reader) ([]BulkUser, error) {
 			lastNameIdx = i
 		case "telegram", "telegram username", "username", "tg", "telegram_username":
 			telegramIdx = i
+		case "group_id", "группа", "group":
+			groupIdx = i
 		}
 	}
 	if firstNameIdx == -1 || lastNameIdx == -1 || telegramIdx == -1 {
@@ -149,10 +167,22 @@ func ParseExcelFile(file io.Reader) ([]BulkUser, error) {
 		if len(row) <= firstNameIdx || len(row) <= lastNameIdx || len(row) <= telegramIdx {
 			continue
 		}
+		var groupID *uint
+		if groupIdx != -1 && len(row) > groupIdx {
+			groupStr := strings.TrimSpace(row[groupIdx])
+			if groupStr != "" {
+				var gid uint
+				_, err := fmt.Sscanf(groupStr, "%d", &gid)
+				if err == nil {
+					groupID = &gid
+				}
+			}
+		}
 		user := BulkUser{
 			FirstName:        strings.TrimSpace(row[firstNameIdx]),
 			LastName:         strings.TrimSpace(row[lastNameIdx]),
 			TelegramUsername: strings.TrimSpace(row[telegramIdx]),
+			GroupID:          groupID,
 		}
 		if strings.HasPrefix(user.TelegramUsername, "@") {
 			user.TelegramUsername = user.TelegramUsername[1:]

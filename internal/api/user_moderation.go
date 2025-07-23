@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,20 +10,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
-<<<<<<< HEAD
 	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
 	"github.com/RhytonBB/vectrik-webbank/internal/services"
-=======
-	"gorm.io/gorm"
-	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 )
 
-var (
-	userListTemplate     = template.Must(template.ParseFiles("web/templates/admin_users.html"))
-	userDetailTemplate   = template.Must(template.ParseFiles("web/templates/admin_user_detail.html"))
-	userRegisterTemplate = template.Must(template.ParseFiles("web/templates/admin_user_register.html"))
-)
+// Удалить переменные userListTemplate, userDetailTemplate, userRegisterTemplate и все вызовы template.ParseFiles, template.Execute и т.д. Оставить только API-методы и бизнес-логику через сервисы.
 
 func AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("[AdminUsersHandler] called, method:", r.Method)
@@ -54,7 +44,8 @@ func AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
 			return
 		}
-		userListTemplate.Execute(w, struct{ Users []db.User }{users})
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(users)
 	case http.MethodPost:
 		handleAdjustment(w, r, claims)
 	default:
@@ -65,10 +56,12 @@ func AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 func AdminUserRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		userRegisterTemplate.Execute(w, nil)
+		// userRegisterTemplate.Execute(w, nil) // Removed
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 	case http.MethodPost:
 		if err := r.ParseForm(); err != nil {
-			userRegisterTemplate.Execute(w, struct{ Error string }{"Ошибка обработки формы"})
+			// userRegisterTemplate.Execute(w, struct{ Error string }{"Ошибка обработки формы"}) // Removed
+			http.Error(w, "Ошибка обработки формы", http.StatusBadRequest)
 			return
 		}
 		firstName := r.FormValue("first_name")
@@ -81,10 +74,13 @@ func AdminUserRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err := services.CreateUser(&user)
 		if err != nil {
-			userRegisterTemplate.Execute(w, struct{ Error string }{"Ошибка: " + err.Error()})
+			// userRegisterTemplate.Execute(w, struct{ Error string }{"Ошибка: " + err.Error()}) // Removed
+			http.Error(w, "Ошибка: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		userRegisterTemplate.Execute(w, struct{ Message string }{"Пользователь успешно создан"})
+		// userRegisterTemplate.Execute(w, struct{ Message string }{"Пользователь успешно создан"}) // Removed
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(user)
 	default:
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 	}
@@ -106,7 +102,8 @@ func AdminUserDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	purchases, _ := services.GetUserPurchases(userID)
 	transactions, _ := services.GetUserTransactions(userID)
-	userDetailTemplate.Execute(w, struct {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
 		User         db.User
 		Purchases    []db.Purchase
 		Transactions []db.Transaction
@@ -153,7 +150,7 @@ func handleAdjustment(w http.ResponseWriter, r *http.Request, claims map[string]
 		http.Error(w, "Ошибка корректировки баланса: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	w.WriteHeader(http.StatusOK)
 }
 
 // API: Получить список пользователей в JSON
@@ -188,26 +185,13 @@ func AdminUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
-<<<<<<< HEAD
-=======
-		if req.FirstName == "" || req.LastName == "" || req.TelegramUsername == "" {
-			log.Println("[AdminUsersAPIHandler] missing fields")
-			http.Error(w, "Все поля обязательны", http.StatusBadRequest)
-			return
-		}
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		user := db.User{
 			FirstName: req.FirstName,
 			LastName: req.LastName,
 			TelegramUsername: req.TelegramUsername,
 		}
-<<<<<<< HEAD
 		if err := services.CreateUser(&user); err != nil {
 			log.Println("[AdminUsersAPIHandler] CreateUser error:", err)
-=======
-		if err := db.DB.Create(&user).Error; err != nil {
-			log.Println("[AdminUsersAPIHandler] DB create error:", err)
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 			http.Error(w, "Ошибка: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -233,36 +217,80 @@ func AdminUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-<<<<<<< HEAD
 	users, err := services.GetAllUsers()
 	if err != nil {
-=======
-	var users []db.User
-	q := r.URL.Query().Get("q")
-    minBalanceStr := r.URL.Query().Get("min_balance")
-    maxBalanceStr := r.URL.Query().Get("max_balance")
-	tx := db.DB.Order("first_name")
-	if q != "" {
-		like := "%" + q + "%"
-		tx = tx.Where("first_name ILIKE ? OR last_name ILIKE ? OR telegram_username ILIKE ?", like, like, like)
-	}
-    if minBalanceStr != "" {
-        if min, err := strconv.Atoi(minBalanceStr); err == nil {
-            tx = tx.Where("balance >= ?", min)
-        }
-    }
-    if maxBalanceStr != "" {
-        if max, err := strconv.Atoi(maxBalanceStr); err == nil {
-            tx = tx.Where("balance <= ?", max)
-        }
-    }
-	if err := tx.Find(&users).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+// API: Получить список всех групп
+func AdminGroupsAPIHandler(w http.ResponseWriter, r *http.Request) {
+    cookie, err := r.Cookie("token")
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+    claims, err := auth.ParseJWT(cookie.Value)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+    isAdmin, ok := claims["is_admin"].(bool)
+    if !ok || !isAdmin {
+        http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+    }
+    if r.Method == http.MethodPost {
+        var req struct {
+            Name     string `json:"name"`
+            AdminIDs []uint `json:"admin_ids"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+            http.Error(w, "Invalid JSON", http.StatusBadRequest)
+            return
+        }
+        group, err := services.CreateGroupWithAdmins(req.Name, req.AdminIDs)
+        if err != nil {
+            http.Error(w, "Ошибка создания группы: "+err.Error(), http.StatusInternalServerError)
+            return
+        }
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(group)
+        return
+    }
+    var groups []db.Group
+    if err := db.DB.Order("name").Find(&groups).Error; err != nil {
+        http.Error(w, "DB error", http.StatusInternalServerError)
+        return
+    }
+    // Для каждого group добавить список админов
+    type GroupWithAdmins struct {
+        ID    uint        `json:"id"`
+        Name  string      `json:"name"`
+        Admins []db.User  `json:"admins"`
+    }
+    var result []GroupWithAdmins
+    for _, g := range groups {
+        var groupAdmins []db.GroupAdmin
+        db.DB.Where("group_id = ?", g.ID).Find(&groupAdmins)
+        var admins []db.User
+        for _, ga := range groupAdmins {
+            var admin db.User
+            if err := db.DB.First(&admin, ga.AdminID).Error; err == nil {
+                admins = append(admins, admin)
+            }
+        }
+        result = append(result, GroupWithAdmins{
+            ID: g.ID,
+            Name: g.Name,
+            Admins: admins,
+        })
+    }
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(result)
 }
 
 // API: Детали пользователя
@@ -290,13 +318,8 @@ func AdminUserDetailAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := uint(userID64)
-<<<<<<< HEAD
 	user, err := services.GetUserByID(userID)
 	if err != nil {
-=======
-	var user db.User
-	if err := db.DB.First(&user, "id = ?", userID).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Пользователь не найден", http.StatusNotFound)
 		return
 	}
@@ -336,7 +359,6 @@ func AdminUserActivateAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-<<<<<<< HEAD
 	var errAct error
 	if req.IsActive {
 		errAct = services.ActivateUser(userID)
@@ -344,9 +366,6 @@ func AdminUserActivateAPIHandler(w http.ResponseWriter, r *http.Request) {
 		errAct = services.DeactivateUser(userID)
 	}
 	if errAct != nil {
-=======
-	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_active", req.IsActive).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -385,11 +404,7 @@ func AdminUserAdminAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-<<<<<<< HEAD
 	if err := services.SetUserAdmin(userID, req.IsAdmin); err != nil {
-=======
-	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_admin", req.IsAdmin).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -421,11 +436,7 @@ func AdminUserBanAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := uint(userID64)
-<<<<<<< HEAD
 	if err := services.BanUser(userID); err != nil {
-=======
-	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_banned", true).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -457,11 +468,7 @@ func AdminUserUnbanAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := uint(userID64)
-<<<<<<< HEAD
 	if err := services.UnbanUser(userID); err != nil {
-=======
-	if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Update("is_banned", false).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
 		return
 	}
@@ -502,6 +509,7 @@ func AdminUserEditDeleteAPIHandler(w http.ResponseWriter, r *http.Request) {
 			TelegramUsername string `json:"telegram_username"`
 			Login     *string `json:"login"`
 			Password  *string `json:"password"`
+			GroupID   *uint   `json:"group_id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -523,22 +531,17 @@ func AdminUserEditDeleteAPIHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			updates["password_hash"] = hashStr
 		}
-<<<<<<< HEAD
+		if req.GroupID != nil {
+			updates["group_id"] = req.GroupID
+		}
 		if err := services.UpdateUser(userID, updates); err != nil {
-=======
-		if err := db.DB.Model(&db.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 			http.Error(w, "Ошибка обновления пользователя: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		return
 	case http.MethodDelete:
-<<<<<<< HEAD
 		if err := services.DeleteUser(userID); err != nil {
-=======
-		if err := db.DB.Delete(&db.User{}, userID).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 			http.Error(w, "Ошибка удаления пользователя: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -548,7 +551,6 @@ func AdminUserEditDeleteAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 	}
 }
-<<<<<<< HEAD
 
 func AdminUserAdjustBalanceAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
@@ -598,5 +600,19 @@ func AdminUserAdjustBalanceAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
-=======
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
+
+func AdminThemeGetHandler(w http.ResponseWriter, r *http.Request) {
+    theme := services.GetTheme()
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{"theme": theme})
+}
+
+func AdminThemeSetHandler(w http.ResponseWriter, r *http.Request) {
+    var req struct{ Theme string `json:"theme"` }
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "Invalid JSON", http.StatusBadRequest)
+        return
+    }
+    services.SetTheme(req.Theme)
+    w.WriteHeader(http.StatusOK)
+}

@@ -2,68 +2,24 @@ package api
 
 import (
 	"encoding/json"
-	"html/template"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
 	"github.com/RhytonBB/vectrik-webbank/internal/services"
+	"gorm.io/gorm"
 )
 
-var rewardTemplate *template.Template
-
-func init() {
-	var err error
-	rewardTemplate, err = template.ParseFiles("web/templates/admin_reward.html")
-	if err != nil {
-		log.Fatalf("❌ Failed to parse admin_reward template: %v", err)
-	}
-}
+// Удалить переменную rewardTemplate, все вызовы template.ParseFiles, template.Execute и т.д.
+// Все функции handleRewardGet, handleRewardPost, renderRewardWithError, renderRewardWithMessage должны возвращать только JSON-ответы или http.Error.
 
 func AdminRewardHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	claims, err := auth.ParseJWT(cookie.Value)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	isAdmin, ok := claims["is_admin"].(bool)
-	if !ok || !isAdmin {
-		http.Error(w, "Доступ запрещён", http.StatusForbidden)
-		return
-	}
-
-	var adminID uint
-	switch v := claims["user_id"].(type) {
-	case float64:
-		adminID = uint(v)
-	case int:
-		adminID = uint(v)
-	case uint:
-		adminID = v
-	default:
-		http.Error(w, "Неверный ID администратора", http.StatusInternalServerError)
-		return
-	}
-
-
-	switch r.Method {
-	case http.MethodGet:
-		handleRewardGet(w, r)
-	case http.MethodPost:
-		handleRewardPost(w, r, adminID)
-	default:
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
-	}
+	http.Error(w, "Метод не поддерживается. Используйте /api/admin/reward", http.StatusMethodNotAllowed)
 }
 
 func handleRewardGet(w http.ResponseWriter, r *http.Request) {
@@ -74,18 +30,8 @@ func handleRewardGet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
 		return
 	}
-	data := struct {
-		Users   []db.User
-		Query   string
-		Message string
-		Error   string
-	}{
-		Users: users,
-		Query: query,
-	}
-	if err := rewardTemplate.Execute(w, data); err != nil {
-		log.Printf("❌ Ошибка рендера шаблона: %v", err)
-	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
 }
 
 func handleRewardPost(w http.ResponseWriter, r *http.Request, adminID uint) {
@@ -95,14 +41,14 @@ func handleRewardPost(w http.ResponseWriter, r *http.Request, adminID uint) {
 	}
 	userIDsStr := r.Form["user_ids"]
 	if len(userIDsStr) == 0 {
-		renderRewardWithError(w, "Выберите хотя бы одного пользователя")
+		http.Error(w, "Выберите хотя бы одного пользователя", http.StatusBadRequest)
 		return
 	}
 	var userIDs []uint
 	for _, s := range userIDsStr {
 		id, err := strconv.ParseUint(s, 10, 64)
 		if err != nil {
-			renderRewardWithError(w, "Некорректный ID пользователя")
+			http.Error(w, "Некорректный ID пользователя", http.StatusBadRequest)
 			return
 		}
 		userIDs = append(userIDs, uint(id))
@@ -112,33 +58,16 @@ func handleRewardPost(w http.ResponseWriter, r *http.Request, adminID uint) {
 	context := r.FormValue("context")
 	amount, err := strconv.Atoi(amountStr)
 	if err != nil || amount <= 0 {
-		renderRewardWithError(w, "Некорректная сумма")
+		http.Error(w, "Некорректная сумма", http.StatusBadRequest)
 		return
 	}
 	err = services.RewardUsers(userIDs, amount, reason, context, adminID)
 	if err != nil {
-		renderRewardWithError(w, err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	renderRewardWithMessage(w, "Вектрики успешно начислены")
-}
-
-func renderRewardWithError(w http.ResponseWriter, errMsg string) {
-	data := struct {
-		Error string
-	}{
-		Error: errMsg,
-	}
-	rewardTemplate.Execute(w, data)
-}
-
-func renderRewardWithMessage(w http.ResponseWriter, msg string) {
-	data := struct {
-		Message string
-	}{
-		Message: msg,
-	}
-	rewardTemplate.Execute(w, data)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Вектрики успешно начислены"}`))
 }
 
 // API: Поиск пользователей для reward в JSON
@@ -158,24 +87,22 @@ func AdminRewardUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	query := strings.TrimSpace(r.URL.Query().Get("q"))
-<<<<<<< HEAD
-	users, err := services.RewardSearchUsers(query)
-	if err != nil {
-=======
+	scope := r.URL.Query().Get("scope")
 	var users []db.User
-	tx := db.DB.Limit(20).Order("first_name")
-	if query != "" {
-		likeQuery := "%" + query + "%"
-		tx = tx.Where(
-			"first_name ILIKE ? OR last_name ILIKE ? OR telegram_username ILIKE ?",
-			likeQuery, likeQuery, likeQuery,
-		)
-	}
-	if err := tx.Find(&users).Error; err != nil {
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
-		http.Error(w, "DB error", http.StatusInternalServerError)
-		return
+	if scope == "group" {
+		var adminID uint
+		switch v := claims["user_id"].(type) {
+		case float64:
+			adminID = uint(v)
+		case int:
+			adminID = uint(v)
+		case uint:
+			adminID = v
+		}
+		users, _ = services.GetGroupUsersByAdmin(adminID)
+	} else {
+		query := strings.TrimSpace(r.URL.Query().Get("q"))
+		users, _ = services.RewardSearchUsers(query)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
@@ -183,6 +110,7 @@ func AdminRewardUsersAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 // API: Начисление вектриков через JSON
 func AdminRewardAPIHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("REWARD API: received request")
 	cookie, err := r.Cookie("token")
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -220,20 +148,12 @@ func AdminRewardAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-<<<<<<< HEAD
-	err = services.RewardUsers(req.UserIDs, req.Amount, req.Reason, req.Context, adminID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-=======
+	fmt.Printf("REWARD API: payload: %+v\n", req)
 	if len(req.UserIDs) == 0 || req.Amount <= 0 || req.Reason == "" {
 		http.Error(w, "Все поля обязательны", http.StatusBadRequest)
 		return
 	}
-	validReasons := map[string]bool{
-		"drop":       true,
-		"активность": true,
-		"награда":    true,
-	}
+	validReasons := services.GetValidRewardReasons()
 	if !validReasons[req.Reason] {
 		http.Error(w, "Некорректная причина", http.StatusBadRequest)
 		return
@@ -277,7 +197,6 @@ func AdminRewardAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := tx.Commit().Error; err != nil {
 		http.Error(w, "Ошибка при сохранении данных", http.StatusInternalServerError)
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

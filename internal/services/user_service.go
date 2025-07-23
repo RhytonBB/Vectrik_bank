@@ -9,7 +9,7 @@ import (
 
 func GetUserByID(userID uint) (*db.User, error) {
 	var user db.User
-	if err := db.DB.First(&user, userID).Error; err != nil {
+	if err := db.DB.Preload("Group").First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -17,7 +17,7 @@ func GetUserByID(userID uint) (*db.User, error) {
 
 func GetAllUsers() ([]db.User, error) {
 	var users []db.User
-	if err := db.DB.Order("first_name").Find(&users).Error; err != nil {
+	if err := db.DB.Preload("Group").Order("first_name").Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
@@ -106,4 +106,52 @@ func AdjustUserBalance(userID uint, amount int, context string, adminID uint) er
 		return err
 	}
 	return nil
+}
+
+func GetGroupUsersByAdmin(adminID uint) ([]db.User, error) {
+    var groupAdmin db.GroupAdmin
+    if err := db.DB.Where("admin_id = ?", adminID).First(&groupAdmin).Error; err != nil {
+        return []db.User{}, nil // Нет группы — пустой список
+    }
+    var users []db.User
+    db.DB.Where("group_id = ?", groupAdmin.GroupID).Find(&users)
+    return users, nil
+}
+
+func GetUserByLogin(login string) (*db.User, error) {
+    var user db.User
+    if err := db.DB.Where("login = ?", login).First(&user).Error; err != nil {
+        return nil, err
+    }
+    return &user, nil
+}
+
+func GetUserBalance(userID uint) (int, error) {
+    var user db.User
+    if err := db.DB.Select("balance").Where("id = ?", userID).First(&user).Error; err != nil {
+        return 0, err
+    }
+    return user.Balance, nil
+}
+
+func GetUserShortInfo(userID uint) (*db.User, error) {
+    var user db.User
+    if err := db.DB.Select("id, first_name, last_name, is_admin, balance").Where("id = ?", userID).First(&user).Error; err != nil {
+        return nil, err
+    }
+    return &user, nil
+}
+
+func CreateGroupWithAdmins(name string, adminIDs []uint) (*db.Group, error) {
+    if name == "" {
+        return nil, errors.New("Название группы обязательно")
+    }
+    group := db.Group{Name: name}
+    if err := db.DB.Create(&group).Error; err != nil {
+        return nil, err
+    }
+    for _, adminID := range adminIDs {
+        db.DB.Create(&db.GroupAdmin{GroupID: group.ID, AdminID: adminID})
+    }
+    return &group, nil
 } 

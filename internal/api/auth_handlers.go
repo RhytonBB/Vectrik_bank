@@ -2,78 +2,21 @@ package api
 
 import (
 	"encoding/json"
-	"html/template"
 	"log"
 	"net/http"
-	"path/filepath"
-	"gorm.io/gorm/clause"
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
-	"github.com/RhytonBB/vectrik-webbank/internal/db"
 	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
 	"github.com/RhytonBB/vectrik-webbank/internal/services"
 )
 
-var templates *template.Template
-
-func init() {
-	files, err := filepath.Glob("web/templates/*.html")
-	if err != nil {
-		log.Fatalf("❌ Failed to find templates: %v", err)
-	}
-	if len(files) == 0 {
-		log.Fatal("❌ No templates found in web/templates/")
-	}
-	log.Printf("📄 Templates loaded: %v\n", files)
-
-	templates = template.Must(template.ParseGlob("web/templates/*.html"))
-}
-
-func renderLogin(w http.ResponseWriter, errorMsg string) {
-	log.Println("🔃 Rendering login page...")
-	data := struct {
-		Error string
-	}{
-		Error: errorMsg,
-	}
-
-	err := templates.ExecuteTemplate(w, "login.html", data)
-	if err != nil {
-		log.Printf("❌ Template execution error: %v", err)
-		http.Error(w, "Ошибка загрузки шаблона", http.StatusInternalServerError)
-	}
-}
-
-func renderDashboard(w http.ResponseWriter, isAdmin bool, balance int) {
-	if isAdmin {
-		data := struct {
-			Balance int
-		}{
-			Balance: balance,
-		}
-		err := templates.ExecuteTemplate(w, "admin_dashboard.html", data)
-		if err != nil {
-			log.Printf("❌ Template execution error (admin_dashboard): %v", err)
-			http.Error(w, "Ошибка загрузки панели администратора", http.StatusInternalServerError)
-		}
-	} else {
-		data := struct {
-			IsAdmin bool
-			Balance int
-		}{
-			IsAdmin: false,
-			Balance: balance,
-		}
-		err := templates.ExecuteTemplate(w, "dashboard.html", data)
-		if err != nil {
-			log.Printf("❌ Template execution error (dashboard): %v", err)
-			http.Error(w, "Ошибка загрузки панели пользователя", http.StatusInternalServerError)
-		}
-	}
-}
+// Удалить переменные templates, функции renderLogin, renderDashboard, init, и все связанные с ними вызовы.
+// Везде, где был редирект на /login или /dashboard, возвращать ошибку авторизации или успешный JSON-ответ.
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		renderLogin(w, "")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Пожалуйста, авторизуйтесь."}`))
 		return
 	}
 
@@ -97,7 +40,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		password = req.Password
 	} else {
 		if err := r.ParseForm(); err != nil {
-			renderLogin(w, "Ошибка обработки формы.")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"error": "Ошибка обработки формы."}`))
 			return
 		}
 		login = r.FormValue("login")
@@ -111,22 +56,25 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"error": "Заполните все поля."}`))
 			return
 		} else {
-			renderLogin(w, "Заполните все поля.")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"error": "Заполните все поля."}`))
 			return
 		}
 	}
 
-	var user db.User
-	result := db.DB.Where("login = ?", login).First(&user)
-	if result.Error != nil {
-		log.Printf("❌ Пользователь не найден: %v", result.Error)
+	user, err := services.GetUserByLogin(login)
+	if err != nil {
+		log.Printf("❌ Пользователь не найден: %v", err)
 		if isJSON {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"error": "Неверный логин или пароль."}`))
 			return
 		} else {
-			renderLogin(w, "Неверный логин или пароль.")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"error": "Неверный логин или пароль."}`))
 			return
 		}
 	}
@@ -139,7 +87,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"error": "Неверный логин или пароль."}`))
 			return
 		} else {
-			renderLogin(w, "Неверный логин или пароль.")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"error": "Неверный логин или пароль."}`))
 			return
 		}
 	}
@@ -153,7 +103,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"error": "Ошибка авторизации"}`))
 			return
 		} else {
-			http.Error(w, "Ошибка авторизации", http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"error": "Ошибка авторизации"}`))
 			return
 		}
 	}
@@ -173,27 +125,26 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("✅ Успешный вход: %s", login)
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Успешный вход"}`))
 }
 
 func DashboardHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Пожалуйста, авторизуйтесь."}`))
 		return
 	}
 
 	claims, err := auth.ParseJWT(cookie.Value)
 	if err != nil {
 		log.Printf("❌ Ошибка разбора токена: %v", err)
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	isAdmin, ok := claims["is_admin"].(bool)
-	if !ok {
-		log.Println("❌ Не удалось определить роль пользователя")
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Пожалуйста, авторизуйтесь."}`))
 		return
 	}
 
@@ -207,23 +158,30 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) {
 		userID = v
 	default:
 		log.Println("❌ Не удалось получить user_id из токена: неизвестный тип")
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Пожалуйста, авторизуйтесь."}`))
 		return
 	}
 
-	var user db.User
-	if err := db.DB.Select("balance").Where("id = ?", userID).First(&user).Error; err != nil {
+	balance, err := services.GetUserBalance(userID)
+	if err != nil {
 		log.Printf("❌ Ошибка получения пользователя: %v", err)
-		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Ошибка базы данных"}`))
 		return
 	}
 
-	renderDashboard(w, isAdmin, user.Balance)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"balance": balance})
 }
 
 
 func adminBroadcastHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Рассылка — в разработке"))
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"error": "Рассылка — в разработке."}`))
 }
 
 
@@ -234,19 +192,25 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Path:   "/",
 		MaxAge: -1,
 	})
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Успешный выход"}`))
 }
 
 // API: Получить баланс текущего пользователя/админа в JSON
 func AdminBalanceAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Unauthorized"}`))
 		return
 	}
 	claims, err := auth.ParseJWT(cookie.Value)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Unauthorized"}`))
 		return
 	}
 	var userID uint
@@ -258,38 +222,50 @@ func AdminBalanceAPIHandler(w http.ResponseWriter, r *http.Request) {
 	case uint:
 		userID = v
 	default:
-		http.Error(w, "Invalid user_id", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Invalid user_id"}`))
 		return
 	}
-	var user db.User
-	if err := db.DB.Select("balance").Where("id = ?", userID).First(&user).Error; err != nil {
-		http.Error(w, "DB error", http.StatusInternalServerError)
+	balance, err := services.GetUserBalance(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "DB error"}`))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"balance": user.Balance})
+	json.NewEncoder(w).Encode(map[string]interface{}{"balance": balance})
 }
 
 // API: Получить информацию о текущем пользователе
 func MeAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Unauthorized"}`))
 		return
 	}
 	claims, err := auth.ParseJWT(cookie.Value)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Unauthorized"}`))
 		return
 	}
 	userID, ok := claims["user_id"].(float64)
 	if !ok {
-		http.Error(w, "Invalid user_id", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "Invalid user_id"}`))
 		return
 	}
-	var user db.User
-	if err := db.DB.Select("id, first_name, last_name, is_admin, balance").Where("id = ?", uint(userID)).First(&user).Error; err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+	user, err := services.GetUserShortInfo(uint(userID))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error": "User not found"}`))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -301,61 +277,3 @@ func MeAPIHandler(w http.ResponseWriter, r *http.Request) {
 		"balance": user.Balance,
 	})
 }
-<<<<<<< HEAD
-
-// API: Получить текущую тему пользователей
-func AdminThemeGetHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	if _, err := auth.ParseJWT(cookie.Value); err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	theme := services.GetTheme()
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"theme": "` + theme + `"}`))
-}
-
-// API: Установить тему пользователей
-func AdminThemeSetHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	claims, err := auth.ParseJWT(cookie.Value)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	isAdmin, ok := claims["is_admin"].(bool)
-	if !ok || !isAdmin {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
-	}
-	var req struct {
-		Theme string `json:"theme"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	if req.Theme != "green" && req.Theme != "pink" {
-		http.Error(w, "Invalid theme", http.StatusBadRequest)
-		return
-	}
-	setting := db.Setting{
-		Key:   "user_theme",
-		Value: req.Theme,
-	}
-	db.DB.Clauses(clause.OnConflict{
-		UpdateAll: true,
-	}).Create(&setting)
-	services.SetTheme(req.Theme)
-	w.WriteHeader(http.StatusOK)
-}
-=======
->>>>>>> 7259f56d86e51521de5028adf64898f696632916
