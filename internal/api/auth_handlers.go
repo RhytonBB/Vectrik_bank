@@ -115,6 +115,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "token",
 		Value:    token,
 		Path:     "/",
+		Domain:   "vectrik-bank.onrender.com", // добавлено для кросс-доменных cookie
 		HttpOnly: true,
 		Secure:   true, // обязательно для https
 		SameSite: http.SameSiteNoneMode, // обязательно для кросс-доменных cookie
