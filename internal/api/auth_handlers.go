@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
 	"github.com/RhytonBB/vectrik-webbank/internal/services"
@@ -119,6 +120,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Secure:   true, // обязательно для https
 		SameSite: http.SameSiteNoneMode, // обязательно для кросс-доменных cookie
 		MaxAge:   60 * 60 * 24, // 1 день
+		Expires:  time.Now().Add(24 * time.Hour),
 	})
 
 	if isJSON {
