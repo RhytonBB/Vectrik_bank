@@ -15,6 +15,12 @@ import (
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
 )
 
+var botToken string
+
+func InitBotToken(token string) {
+	botToken = token
+}
+
 func CreateBroadcastMessage(adminID uint, text string, mediaURL, mediaType *string, targetType string, targetUserIDs []uint) (*db.BroadcastMessage, error) {
 	if text == "" || targetType == "" {
 		return nil, errors.New("Текст и тип аудитории обязательны")
@@ -87,7 +93,6 @@ func sendBroadcastMessage(broadcastID uint) {
 		})
 		return
 	}
-	botToken := os.Getenv("BOT_TOKEN")
 	if botToken == "" {
 		db.DB.Model(&broadcast).Updates(map[string]interface{}{
 			"status":        "failed",

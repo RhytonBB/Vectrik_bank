@@ -9,6 +9,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/RhytonBB/vectrik-webbank/internal/api"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
+	"github.com/RhytonBB/vectrik-webbank/internal/auth"
+	"github.com/RhytonBB/vectrik-webbank/internal/config"
+	"github.com/RhytonBB/vectrik-webbank/internal/services"
 	"github.com/rs/cors"
 )
 
@@ -18,21 +21,14 @@ func main() {
 		log.Println("No .env file found")
 	}
 
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL is not set")
-	}
+	cfg := config.LoadConfig()
 
-	botToken := os.Getenv("BOT_TOKEN")
-	if botToken == "" {
-		log.Println("⚠️  BOT_TOKEN is not set - Telegram broadcast will not work")
-	} else {
-		log.Println("✅ BOT_TOKEN is configured")
-	}
-
-	if err := db.InitDB(dbURL); err != nil {
+	if err := db.InitDB(cfg.DatabaseURL); err != nil {
 		log.Fatalf("Failed to init DB: %v", err)
 	}
+
+	auth.InitJWTSecret()
+	services.InitBotToken(cfg.BotToken)
 
 	api.RegisterRoutes()
 

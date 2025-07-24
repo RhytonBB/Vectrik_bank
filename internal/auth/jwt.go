@@ -9,9 +9,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+var jwtSecret []byte
 
-func init() {
+func InitJWTSecret() {
+	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 	fmt.Println("[auth/jwt.go] jwtSecret (init):", string(jwtSecret))
 }
 

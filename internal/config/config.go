@@ -11,6 +11,7 @@ type Config struct {
     DatabaseURL string
     Port        string
     JWTSecret   string
+    BotToken    string
 }
 
 func LoadConfig() *Config {
@@ -22,5 +23,6 @@ func LoadConfig() *Config {
         DatabaseURL: os.Getenv("DATABASE_URL"),
         Port:        os.Getenv("PORT"),
         JWTSecret:   os.Getenv("JWT_SECRET"),
+        BotToken:    os.Getenv("BOT_TOKEN"),
     }
 }
