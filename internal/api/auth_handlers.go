@@ -118,9 +118,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, // обязательно для https
-		SameSite: http.SameSiteNoneMode, // обязательно для кросс-доменных cookie
-		MaxAge:   60 * 60 * 24, // 1 день
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+		Domain:   ".vectrikbank.ru",
+		MaxAge:   60 * 60 * 24,
 		Expires:  time.Now().Add(24 * time.Hour),
 	})
 
