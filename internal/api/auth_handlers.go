@@ -8,6 +8,7 @@ import (
 	"github.com/RhytonBB/vectrik-webbank/internal/auth"
 	"github.com/RhytonBB/vectrik-webbank/pkg/hash"
 	"github.com/RhytonBB/vectrik-webbank/internal/services"
+	"strings"
 )
 
 // Удалить переменные templates, функции renderLogin, renderDashboard, init, и все связанные с ними вызовы.
@@ -21,7 +22,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isJSON := r.Header.Get("Content-Type") == "application/json" || r.Header.Get("Accept") == "application/json"
+	isJSON := strings.Contains(r.Header.Get("Content-Type"), "application/json") || strings.Contains(r.Header.Get("Accept"), "application/json")
 
 	var login, password string
 	if isJSON {

@@ -48,7 +48,7 @@ func main() {
 	}
 
 	handler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"https://vectrik-bank-front.onrender.com"},
+		AllowedOrigins:   []string{"https://vectrik-bank-front.onrender.com", "https://vectrikbank-front.onrender.com"},
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
