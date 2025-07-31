@@ -64,6 +64,7 @@ func RegisterRoutes() {
 	router.HandleFunc("/api/admin/theme", AdminThemeGetHandler).Methods("GET")
 	router.HandleFunc("/api/admin/theme", AdminThemeSetHandler).Methods("POST")
 	router.HandleFunc("/api/admin/groups", AdminGroupsAPIHandler).Methods("GET", "POST")
+	router.HandleFunc("/api/admin/groups/{id}", AdminGroupsAPIHandler).Methods("DELETE")
 
 	http.Handle("/", router)
 }

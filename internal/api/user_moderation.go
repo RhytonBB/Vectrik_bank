@@ -261,6 +261,25 @@ func AdminGroupsAPIHandler(w http.ResponseWriter, r *http.Request) {
         json.NewEncoder(w).Encode(group)
         return
     }
+    if r.Method == http.MethodDelete {
+        vars := mux.Vars(r)
+        groupIDStr := vars["id"]
+        groupID64, err := strconv.ParseUint(groupIDStr, 10, 64)
+        if err != nil {
+            http.Error(w, "Некорректный ID группы", http.StatusBadRequest)
+            return
+        }
+        groupID := uint(groupID64)
+        
+        err = services.DeleteGroup(groupID)
+        if err != nil {
+            http.Error(w, "Ошибка удаления группы: "+err.Error(), http.StatusInternalServerError)
+            return
+        }
+        
+        w.WriteHeader(http.StatusOK)
+        return
+    }
     var groups []db.Group
     if err := db.DB.Order("name").Find(&groups).Error; err != nil {
         http.Error(w, "DB error", http.StatusInternalServerError)

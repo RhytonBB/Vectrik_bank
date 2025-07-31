@@ -154,4 +154,28 @@ func CreateGroupWithAdmins(name string, adminIDs []uint) (*db.Group, error) {
         db.DB.Create(&db.GroupAdmin{GroupID: group.ID, AdminID: adminID})
     }
     return &group, nil
+}
+
+func DeleteGroup(groupID uint) error {
+    tx := db.DB.Begin()
+    
+    // Удаляем связи администраторов с группой
+    if err := tx.Where("group_id = ?", groupID).Delete(&db.GroupAdmin{}).Error; err != nil {
+        tx.Rollback()
+        return err
+    }
+    
+    // Обновляем пользователей, убирая ссылку на группу
+    if err := tx.Model(&db.User{}).Where("group_id = ?", groupID).Update("group_id", nil).Error; err != nil {
+        tx.Rollback()
+        return err
+    }
+    
+    // Удаляем саму группу
+    if err := tx.Delete(&db.Group{}, groupID).Error; err != nil {
+        tx.Rollback()
+        return err
+    }
+    
+    return tx.Commit().Error
 } 
