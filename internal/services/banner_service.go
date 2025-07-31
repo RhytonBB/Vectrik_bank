@@ -53,6 +53,12 @@ func DeactivateBanner(bannerID uint) error {
 	return db.DB.Model(&db.Banner{}).Where("id = ?", bannerID).Update("is_active", false).Error
 }
 
+func GetActiveBanners() ([]db.Banner, error) {
+	var banners []db.Banner
+	err := db.DB.Where("is_active = ?", true).Order("created_at desc").Find(&banners).Error
+	return banners, err
+}
+
 func UploadAndCreateBanner(title string, fileHeader *multipart.FileHeader) (*db.Banner, error) {
 	if title == "" || fileHeader == nil {
 		return nil, fmt.Errorf("Заполните все поля и выберите файл")

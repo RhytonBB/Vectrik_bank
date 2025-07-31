@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
 	"time"
 	"github.com/RhytonBB/vectrik-webbank/internal/db"
 	"gorm.io/gorm"
@@ -23,10 +25,30 @@ func GetAllUsers() ([]db.User, error) {
 	return users, nil
 }
 
+// Генерирует уникальный 8-значный номер счета
+func generateAccountNumber() string {
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("%08d", rand.Intn(100000000))
+}
+
 func CreateUser(user *db.User) error {
 	if user.FirstName == "" || user.LastName == "" || user.TelegramUsername == "" {
 		return errors.New("Имя, фамилия и Telegram username обязательны")
 	}
+	
+	// Генерируем уникальный номер счета
+	for {
+		accountNumber := generateAccountNumber()
+		var existingUser db.User
+		if err := db.DB.Where("account_number = ?", accountNumber).First(&existingUser).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				user.AccountNumber = accountNumber
+				break
+			}
+			return err
+		}
+	}
+	
 	return db.DB.Create(user).Error
 }
 
@@ -136,7 +158,7 @@ func GetUserBalance(userID uint) (int, error) {
 
 func GetUserShortInfo(userID uint) (*db.User, error) {
     var user db.User
-    if err := db.DB.Select("id, first_name, last_name, is_admin, balance").Where("id = ?", userID).First(&user).Error; err != nil {
+    if err := db.DB.Select("id, first_name, last_name, is_admin, balance, account_number").Where("id = ?", userID).First(&user).Error; err != nil {
         return nil, err
     }
     return &user, nil

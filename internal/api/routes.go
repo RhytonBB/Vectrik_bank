@@ -60,6 +60,13 @@ func RegisterRoutes() {
 	router.HandleFunc("/api/me", MeAPIHandler).Methods("GET")
 
 	router.HandleFunc("/logout", LogoutHandler)
+	
+	// CLIENT API
+	router.HandleFunc("/api/client/banners", ClientBannersAPIHandler).Methods("GET")
+	router.HandleFunc("/api/client/products", ClientProductsAPIHandler).Methods("GET")
+	router.HandleFunc("/api/client/purchase", ClientPurchaseProductAPIHandler).Methods("POST")
+	router.HandleFunc("/api/client/purchases", ClientUserPurchasesAPIHandler).Methods("GET")
+	router.HandleFunc("/api/client/transactions", ClientUserTransactionsAPIHandler).Methods("GET")
 
 	router.HandleFunc("/api/admin/theme", AdminThemeGetHandler).Methods("GET")
 	router.HandleFunc("/api/admin/theme", AdminThemeSetHandler).Methods("POST")

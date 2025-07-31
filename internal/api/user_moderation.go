@@ -635,3 +635,87 @@ func AdminThemeSetHandler(w http.ResponseWriter, r *http.Request) {
     services.SetTheme(req.Theme)
     w.WriteHeader(http.StatusOK)
 }
+
+// API: Получить покупки текущего пользователя
+func ClientUserPurchasesAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	
+	// Проверяем, что пользователь не админ (только для клиентской части)
+	isAdmin, ok := claims["is_admin"].(bool)
+	if ok && isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	
+	var userID uint
+	switch v := claims["user_id"].(type) {
+	case float64:
+		userID = uint(v)
+	case int:
+		userID = uint(v)
+	case uint:
+		userID = v
+	default:
+		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+	
+	purchases, err := services.GetUserPurchases(userID)
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(purchases)
+}
+
+// API: Получить транзакции текущего пользователя
+func ClientUserTransactionsAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	
+	// Проверяем, что пользователь не админ (только для клиентской части)
+	isAdmin, ok := claims["is_admin"].(bool)
+	if ok && isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	
+	var userID uint
+	switch v := claims["user_id"].(type) {
+	case float64:
+		userID = uint(v)
+	case int:
+		userID = uint(v)
+	case uint:
+		userID = v
+	default:
+		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+	
+	transactions, err := services.GetUserTransactions(userID)
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(transactions)
+}

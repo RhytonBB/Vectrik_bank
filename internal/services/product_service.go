@@ -52,6 +52,89 @@ func DeactivateProduct(productID uint) error {
 	return db.DB.Model(&db.Product{}).Where("id = ?", productID).Update("is_active", false).Error
 }
 
+func GetActiveProducts() ([]db.Product, error) {
+	var products []db.Product
+	err := db.DB.Where("is_active = ?", true).Order("created_at desc").Find(&products).Error
+	return products, err
+}
+
+func PurchaseProduct(userID, productID uint, quantity int) error {
+	tx := db.DB.Begin()
+	
+	// Получаем продукт
+	var product db.Product
+	if err := tx.First(&product, productID).Error; err != nil {
+		tx.Rollback()
+		return errors.New("Товар не найден")
+	}
+	
+	if !product.IsActive {
+		tx.Rollback()
+		return errors.New("Товар недоступен")
+	}
+	
+	if product.Stock < quantity {
+		tx.Rollback()
+		return errors.New("Недостаточно товара на складе")
+	}
+	
+	// Получаем пользователя
+	var user db.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		return errors.New("Пользователь не найден")
+	}
+	
+	totalCost := product.Price * quantity
+	
+	if user.Balance < totalCost {
+		tx.Rollback()
+		return errors.New("Недостаточно средств")
+	}
+	
+	// Создаем покупку
+	purchase := db.Purchase{
+		UserID:    userID,
+		ProductID: productID,
+		Quantity:  quantity,
+		Confirmed: true,
+		CreatedAt: time.Now(),
+	}
+	
+	if err := tx.Create(&purchase).Error; err != nil {
+		tx.Rollback()
+		return errors.New("Ошибка создания покупки")
+	}
+	
+	// Создаем транзакцию
+	transaction := db.Transaction{
+		UserID:    userID,
+		Amount:    -totalCost,
+		Reason:    fmt.Sprintf("Покупка: %s", product.Name),
+		Source:    "purchase",
+		CreatedAt: time.Now(),
+	}
+	
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		return errors.New("Ошибка создания транзакции")
+	}
+	
+	// Обновляем баланс пользователя
+	if err := tx.Model(&user).UpdateColumn("balance", user.Balance-totalCost).Error; err != nil {
+		tx.Rollback()
+		return errors.New("Ошибка обновления баланса")
+	}
+	
+	// Обновляем остаток товара
+	if err := tx.Model(&product).UpdateColumn("stock", product.Stock-quantity).Error; err != nil {
+		tx.Rollback()
+		return errors.New("Ошибка обновления остатка товара")
+	}
+	
+	return tx.Commit().Error
+}
+
 func UploadProductMedia(fileHeader *multipart.FileHeader) (string, error) {
 	if fileHeader == nil {
 		return "", fmt.Errorf("Файл не выбран")

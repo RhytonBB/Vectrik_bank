@@ -182,4 +182,33 @@ func AdminBannerDetailAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+}
+
+// API: Получить активные баннеры для клиентской части
+func ClientBannersAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	
+	// Проверяем, что пользователь не админ (только для клиентской части)
+	isAdmin, ok := claims["is_admin"].(bool)
+	if ok && isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	
+	banners, err := services.GetActiveBanners()
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(banners)
 } 

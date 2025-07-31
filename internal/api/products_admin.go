@@ -266,4 +266,95 @@ func AdminProductUploadAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(fmt.Sprintf(`{"url": "%s"}`, url)))
+}
+
+// API: Получить активные продукты для клиентской части
+func ClientProductsAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	
+	// Проверяем, что пользователь не админ (только для клиентской части)
+	isAdmin, ok := claims["is_admin"].(bool)
+	if ok && isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	
+	products, err := services.GetActiveProducts()
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(products)
+} 
+
+// API: Покупка товара клиентом
+func ClientPurchaseProductAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	
+	// Проверяем, что пользователь не админ (только для клиентской части)
+	isAdmin, ok := claims["is_admin"].(bool)
+	if ok && isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	
+	var userID uint
+	switch v := claims["user_id"].(type) {
+	case float64:
+		userID = uint(v)
+	case int:
+		userID = uint(v)
+	case uint:
+		userID = v
+	default:
+		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+	
+	if r.Method == http.MethodPost {
+		var req struct {
+			ProductID uint `json:"product_id"`
+			Quantity  int  `json:"quantity"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		
+		if req.Quantity <= 0 {
+			http.Error(w, "Количество должно быть больше 0", http.StatusBadRequest)
+			return
+		}
+		
+		err := services.PurchaseProduct(userID, req.ProductID, req.Quantity)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Покупка успешно совершена"})
+		return
+	}
+	
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 } 

@@ -282,5 +282,6 @@ func MeAPIHandler(w http.ResponseWriter, r *http.Request) {
 		"last_name": user.LastName,
 		"is_admin": user.IsAdmin,
 		"balance": user.Balance,
+		"account_number": user.AccountNumber,
 	})
 }
