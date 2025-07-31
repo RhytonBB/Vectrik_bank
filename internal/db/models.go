@@ -26,7 +26,7 @@ type User struct {
     IsRegistered     bool      `gorm:"default:false" json:"is_registered"`
     IsAdmin          bool      `gorm:"default:false" json:"is_admin"`
     Balance          int       `gorm:"default:0;not null" json:"balance"`
-    AccountNumber    string    `gorm:"unique;not null" json:"account_number"`
+    AccountNumber    string    `gorm:"unique;size:8" json:"account_number"`
     RegisteredAt     *time.Time `json:"registered_at"`
     IsActive         bool      `gorm:"default:true" json:"is_active"`
     IsBanned         bool      `gorm:"default:false" json:"is_banned"`
