@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://avnadmin:AVNS_hrZbDFPdnDzERfL9KsA@pg-3f0a4609-iosirotkin-fa7b.i.aivencloud.com:17491/defaultdb?sslmode=require
+      PORT: 8080
+      JWT_SECRET: твой_секретный_ключ
+      BOT_TOKEN: 8082001071:AAGM0wpFF6L0vDh6Z91DetDhVjT81fqjri4
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./internal/media:/app/media
+    restart: unless-stopped
