@@ -4,7 +4,6 @@ import (
     "encoding/json"
     "net/http"
     "strconv"
-    "time"
     "github.com/gorilla/mux"
     "github.com/RhytonBB/vectrik-webbank/internal/db"
 )
