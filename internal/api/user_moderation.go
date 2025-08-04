@@ -636,6 +636,13 @@ func AdminThemeSetHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
 }
 
+// API: Получить тему для клиентов
+func ClientThemeGetHandler(w http.ResponseWriter, r *http.Request) {
+    theme := services.GetTheme()
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{"theme": theme})
+}
+
 // API: Получить покупки текущего пользователя
 func ClientUserPurchasesAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")

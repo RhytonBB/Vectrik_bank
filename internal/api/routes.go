@@ -75,6 +75,7 @@ func RegisterRoutes() {
 	router.HandleFunc("/api/client/purchase", ClientPurchaseProductAPIHandler).Methods("POST")
 	router.HandleFunc("/api/client/purchases", ClientUserPurchasesAPIHandler).Methods("GET")
 	router.HandleFunc("/api/client/transactions", ClientUserTransactionsAPIHandler).Methods("GET")
+	router.HandleFunc("/api/client/theme", ClientThemeGetHandler).Methods("GET")
 	
 	// NEWS (CLIENT)
 	router.HandleFunc("/api/news", GetPublishedNews).Methods("GET")
