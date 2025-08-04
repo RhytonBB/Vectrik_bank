@@ -5,13 +5,13 @@ import (
     "net/http"
     "strconv"
     "time"
-    "github.com/gin-gonic/gin"
+    "github.com/gorilla/mux"
     "github.com/RhytonBB/vectrik-webbank/internal/db"
 )
 
 type NewsRequest struct {
-    Title       string   `json:"title" binding:"required"`
-    Content     string   `json:"content" binding:"required"`
+    Title       string   `json:"title"`
+    Content     string   `json:"content"`
     Summary     string   `json:"summary"`
     Images      []string `json:"images"`
     IsPublished bool     `json:"is_published"`
@@ -19,17 +19,23 @@ type NewsRequest struct {
 }
 
 // Создание новости
-func CreateNews(c *gin.Context) {
+func CreateNews(w http.ResponseWriter, r *http.Request) {
     var req NewsRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    // Валидация
+    if req.Title == "" || req.Content == "" {
+        http.Error(w, "Title and content are required", http.StatusBadRequest)
         return
     }
 
     // Конвертируем массив изображений в JSON
     imagesJSON, err := json.Marshal(req.Images)
     if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid images format"})
+        http.Error(w, "Invalid images format", http.StatusBadRequest)
         return
     }
 
@@ -48,56 +54,63 @@ func CreateNews(c *gin.Context) {
     }
 
     if err := db.DB.Create(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create news"})
+        http.Error(w, "Failed to create news", http.StatusInternalServerError)
         return
     }
 
-    c.JSON(http.StatusCreated, news)
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(news)
 }
 
 // Получение списка новостей (админ)
-func GetNewsList(c *gin.Context) {
+func GetNewsList(w http.ResponseWriter, r *http.Request) {
     var news []db.News
     if err := db.DB.Order("created_at desc").Find(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
+        http.Error(w, "Failed to fetch news", http.StatusInternalServerError)
         return
     }
 
-    c.JSON(http.StatusOK, news)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(news)
 }
 
 // Получение конкретной новости (админ)
-func GetNewsById(c *gin.Context) {
-    id := c.Param("id")
-    var news db.News
+func GetNewsById(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    id := vars["id"]
     
+    var news db.News
     if err := db.DB.First(&news, id).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        http.Error(w, "News not found", http.StatusNotFound)
         return
     }
 
-    c.JSON(http.StatusOK, news)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(news)
 }
 
 // Обновление новости
-func UpdateNews(c *gin.Context) {
-    id := c.Param("id")
+func UpdateNews(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    id := vars["id"]
+    
     var req NewsRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
 
     var news db.News
     if err := db.DB.First(&news, id).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        http.Error(w, "News not found", http.StatusNotFound)
         return
     }
 
     // Конвертируем массив изображений в JSON
     imagesJSON, err := json.Marshal(req.Images)
     if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid images format"})
+        http.Error(w, "Invalid images format", http.StatusBadRequest)
         return
     }
 
@@ -117,20 +130,22 @@ func UpdateNews(c *gin.Context) {
     news.IsPublished = req.IsPublished
 
     if err := db.DB.Save(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update news"})
+        http.Error(w, "Failed to update news", http.StatusInternalServerError)
         return
     }
 
-    c.JSON(http.StatusOK, news)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(news)
 }
 
 // Публикация/снятие с публикации
-func ToggleNewsPublish(c *gin.Context) {
-    id := c.Param("id")
-    var news db.News
+func ToggleNewsPublish(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    id := vars["id"]
     
+    var news db.News
     if err := db.DB.First(&news, id).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        http.Error(w, "News not found", http.StatusNotFound)
         return
     }
 
@@ -143,20 +158,24 @@ func ToggleNewsPublish(c *gin.Context) {
     }
 
     if err := db.DB.Save(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update news"})
+        http.Error(w, "Failed to update news", http.StatusInternalServerError)
         return
     }
 
-    c.JSON(http.StatusOK, news)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(news)
 }
 
 // Удаление новости
-func DeleteNews(c *gin.Context) {
-    id := c.Param("id")
+func DeleteNews(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    id := vars["id"]
+    
     if err := db.DB.Delete(&db.News{}, id).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete news"})
+        http.Error(w, "Failed to delete news", http.StatusInternalServerError)
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "News deleted successfully"})
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{"message": "News deleted successfully"})
 } 

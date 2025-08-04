@@ -4,7 +4,7 @@ import (
     "encoding/json"
     "net/http"
     "strconv"
-    "github.com/gin-gonic/gin"
+    "github.com/gorilla/mux"
     "github.com/RhytonBB/vectrik-webbank/internal/db"
 )
 
@@ -21,10 +21,10 @@ type NewsResponse struct {
 }
 
 // Получение опубликованных новостей
-func GetPublishedNews(c *gin.Context) {
+func GetPublishedNews(w http.ResponseWriter, r *http.Request) {
     var news []db.News
     if err := db.DB.Where("is_published = ?", true).Order("is_featured desc, published_at desc").Find(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
+        http.Error(w, "Failed to fetch news", http.StatusInternalServerError)
         return
     }
 
@@ -53,16 +53,18 @@ func GetPublishedNews(c *gin.Context) {
         })
     }
 
-    c.JSON(http.StatusOK, response)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
 }
 
 // Получение конкретной новости
-func GetNewsById(c *gin.Context) {
-    id := c.Param("id")
-    var news db.News
+func GetNewsById(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    id := vars["id"]
     
+    var news db.News
     if err := db.DB.Where("id = ? AND is_published = ?", id, true).First(&news).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        http.Error(w, "News not found", http.StatusNotFound)
         return
     }
 
@@ -91,13 +93,14 @@ func GetNewsById(c *gin.Context) {
         CreatedAt:   news.CreatedAt.Format("2006-01-02T15:04:05Z"),
     }
 
-    c.JSON(http.StatusOK, response)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
 }
 
 // Получение последних новостей (для превью)
-func GetLatestNews(c *gin.Context) {
+func GetLatestNews(w http.ResponseWriter, r *http.Request) {
     limit := 3
-    if limitStr := c.Query("limit"); limitStr != "" {
+    if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
         if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 10 {
             limit = l
         }
@@ -105,7 +108,7 @@ func GetLatestNews(c *gin.Context) {
 
     var news []db.News
     if err := db.DB.Where("is_published = ?", true).Order("is_featured desc, published_at desc").Limit(limit).Find(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
+        http.Error(w, "Failed to fetch news", http.StatusInternalServerError)
         return
     }
 
@@ -134,5 +137,6 @@ func GetLatestNews(c *gin.Context) {
         })
     }
 
-    c.JSON(http.StatusOK, response)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
 } 
