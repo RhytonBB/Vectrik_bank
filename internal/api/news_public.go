@@ -13,9 +13,12 @@ type NewsResponse struct {
     Title       string   `json:"title"`
     Content     string   `json:"content"`
     Summary     string   `json:"summary"`
-    Images      []string `json:"images"`
+    Images      []db.NewsImage `json:"images"`
     IsFeatured  bool     `json:"is_featured"`
     Views       int      `json:"views"`
+    ThumbsUp    int      `json:"thumbs_up"`
+    ThumbsDown  int      `json:"thumbs_down"`
+    FireCount   int      `json:"fire_count"`
     PublishedAt *string  `json:"published_at"`
     CreatedAt   string   `json:"created_at"`
 }
@@ -30,7 +33,7 @@ func GetPublishedNews(w http.ResponseWriter, r *http.Request) {
 
     var response []NewsResponse
     for _, item := range news {
-        var images []string
+        var images []db.NewsImage
         if item.Images != "" {
             json.Unmarshal([]byte(item.Images), &images)
         }
@@ -71,7 +74,7 @@ func GetPublicNewsById(w http.ResponseWriter, r *http.Request) {
     // Увеличиваем счетчик просмотров
     db.DB.Model(&news).Update("views", news.Views+1)
 
-    var images []string
+    var images []db.NewsImage
     if news.Images != "" {
         json.Unmarshal([]byte(news.Images), &images)
     }
@@ -114,7 +117,7 @@ func GetLatestNews(w http.ResponseWriter, r *http.Request) {
 
     var response []NewsResponse
     for _, item := range news {
-        var images []string
+        var images []db.NewsImage
         if item.Images != "" {
             json.Unmarshal([]byte(item.Images), &images)
         }

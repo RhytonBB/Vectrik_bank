@@ -9,12 +9,12 @@ import (
 )
 
 type NewsRequest struct {
-    Title       string   `json:"title"`
-    Content     string   `json:"content"`
-    Summary     string   `json:"summary"`
-    Images      []string `json:"images"`
-    IsPublished bool     `json:"is_published"`
-    IsFeatured  bool     `json:"is_featured"`
+    Title       string        `json:"title"`
+    Content     string        `json:"content"`
+    Summary     string        `json:"summary"`
+    Images      []db.NewsImage `json:"images"`
+    IsPublished bool          `json:"is_published"`
+    IsFeatured  bool          `json:"is_featured"`
 }
 
 // Создание новости

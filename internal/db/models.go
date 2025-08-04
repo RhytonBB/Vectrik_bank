@@ -163,11 +163,30 @@ type News struct {
     Title       string    `gorm:"not null" json:"title"`
     Content     string    `gorm:"type:text;not null" json:"content"`
     Summary     string    `gorm:"type:text" json:"summary"` // Краткое описание для превью
-    Images      string    `gorm:"type:text" json:"images"` // JSON массив URL изображений
+    Images      string    `gorm:"type:text" json:"images"` // JSON массив объектов с URL и позицией
     IsPublished bool      `gorm:"default:false" json:"is_published"`
     IsFeatured  bool      `gorm:"default:false" json:"is_featured"` // Важная новость
     Views       int       `gorm:"default:0" json:"views"` // Количество просмотров
+    ThumbsUp    int       `gorm:"default:0" json:"thumbs_up"` // Количество лайков
+    ThumbsDown  int       `gorm:"default:0" json:"thumbs_down"` // Количество дизлайков
+    FireCount   int       `gorm:"default:0" json:"fire_count"` // Количество огоньков
     PublishedAt *time.Time `json:"published_at"`
     CreatedAt   time.Time `json:"created_at"`
     UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type NewsImage struct {
+    URL      string `json:"url"`
+    Position int    `json:"position"` // Позиция в тексте (после какого символа)
+    Alt      string `json:"alt"`      // Альтернативный текст
+}
+
+type NewsRating struct {
+    ID       uint   `gorm:"primaryKey;autoIncrement" json:"id"`
+    NewsID   uint   `gorm:"not null;index" json:"news_id"`
+    News     News   `gorm:"foreignKey:NewsID" json:"news"`
+    UserID   uint   `gorm:"not null;index" json:"user_id"`
+    User     User   `gorm:"foreignKey:UserID" json:"user"`
+    Rating   string `gorm:"not null;check:rating IN ('thumbs_up','thumbs_down','fire')" json:"rating"`
+    CreatedAt time.Time `json:"created_at"`
 }
