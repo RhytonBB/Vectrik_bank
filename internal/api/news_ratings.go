@@ -6,6 +6,8 @@ import (
     "strconv"
     "github.com/gorilla/mux"
     "github.com/RhytonBB/vectrik-webbank/internal/db"
+    "errors"
+    "github.com/RhytonBB/vectrik-webbank/internal/auth"
 )
 
 type RatingRequest struct {
@@ -139,7 +141,32 @@ func updateNewsRatingCounts(newsID uint, ratingType string, delta int) {
 
 // Вспомогательная функция для получения текущего пользователя
 func getCurrentUser(r *http.Request) (*db.User, error) {
-    // Здесь должна быть логика получения пользователя из сессии
-    // Пока что возвращаем заглушку - нужно интегрировать с существующей системой аутентификации
-    return nil, nil
+    cookie, err := r.Cookie("token")
+    if err != nil {
+        return nil, err
+    }
+    
+    claims, err := auth.ParseJWT(cookie.Value)
+    if err != nil {
+        return nil, err
+    }
+    
+    var userID uint
+    switch v := claims["user_id"].(type) {
+    case float64:
+        userID = uint(v)
+    case int:
+        userID = uint(v)
+    case uint:
+        userID = v
+    default:
+        return nil, errors.New("invalid user_id type")
+    }
+    
+    var user db.User
+    if err := db.DB.First(&user, userID).Error; err != nil {
+        return nil, err
+    }
+    
+    return &user, nil
 } 
