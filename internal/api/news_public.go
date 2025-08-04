@@ -57,8 +57,8 @@ func GetPublishedNews(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(response)
 }
 
-// Получение конкретной новости
-func GetNewsById(w http.ResponseWriter, r *http.Request) {
+// Получение конкретной новости (публичная)
+func GetPublicNewsById(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     id := vars["id"]
     

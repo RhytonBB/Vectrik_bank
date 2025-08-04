@@ -79,7 +79,7 @@ func RegisterRoutes() {
 	// NEWS (CLIENT)
 	router.HandleFunc("/api/news", GetPublishedNews).Methods("GET")
 	router.HandleFunc("/api/news/latest", GetLatestNews).Methods("GET")
-	router.HandleFunc("/api/news/{id}", GetNewsById).Methods("GET")
+	router.HandleFunc("/api/news/{id}", GetPublicNewsById).Methods("GET")
 
 	router.HandleFunc("/api/admin/theme", AdminThemeGetHandler).Methods("GET")
 	router.HandleFunc("/api/admin/theme", AdminThemeSetHandler).Methods("POST")
