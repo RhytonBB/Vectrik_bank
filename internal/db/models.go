@@ -157,3 +157,17 @@ type Setting struct {
     Key   string `gorm:"primaryKey;size:64" json:"key"`
     Value string `gorm:"not null" json:"value"`
 }
+
+type News struct {
+    ID          uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+    Title       string    `gorm:"not null" json:"title"`
+    Content     string    `gorm:"type:text;not null" json:"content"`
+    Summary     string    `gorm:"type:text" json:"summary"` // Краткое описание для превью
+    Images      string    `gorm:"type:text" json:"images"` // JSON массив URL изображений
+    IsPublished bool      `gorm:"default:false" json:"is_published"`
+    IsFeatured  bool      `gorm:"default:false" json:"is_featured"` // Важная новость
+    Views       int       `gorm:"default:0" json:"views"` // Количество просмотров
+    PublishedAt *time.Time `json:"published_at"`
+    CreatedAt   time.Time `json:"created_at"`
+    UpdatedAt   time.Time `json:"updated_at"`
+}

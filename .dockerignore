@@ -1,0 +1,8 @@
+.git
+vektrik-frontend
+*.md
+*.xlsx
+*.csv
+.DS_Store
+.env
+secret.log 

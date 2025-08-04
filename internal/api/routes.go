@@ -55,6 +55,14 @@ func RegisterRoutes() {
 	router.HandleFunc("/api/admin/broadcast/{id}/history", AdminBroadcastHistoryAPIHandler).Methods("GET")
 	router.HandleFunc("/api/admin/broadcast/users", AdminBroadcastUsersAPIHandler).Methods("GET")
 	
+	// NEWS (ADMIN)
+	router.HandleFunc("/api/admin/news", GetNewsList).Methods("GET")
+	router.HandleFunc("/api/admin/news", CreateNews).Methods("POST")
+	router.HandleFunc("/api/admin/news/{id}", GetNewsById).Methods("GET")
+	router.HandleFunc("/api/admin/news/{id}", UpdateNews).Methods("PUT")
+	router.HandleFunc("/api/admin/news/{id}/publish", ToggleNewsPublish).Methods("POST")
+	router.HandleFunc("/api/admin/news/{id}", DeleteNews).Methods("DELETE")
+	
 	// LOGIN
 	router.HandleFunc("/api/login", LoginHandler).Methods("POST")
 	router.HandleFunc("/api/me", MeAPIHandler).Methods("GET")
@@ -67,6 +75,11 @@ func RegisterRoutes() {
 	router.HandleFunc("/api/client/purchase", ClientPurchaseProductAPIHandler).Methods("POST")
 	router.HandleFunc("/api/client/purchases", ClientUserPurchasesAPIHandler).Methods("GET")
 	router.HandleFunc("/api/client/transactions", ClientUserTransactionsAPIHandler).Methods("GET")
+	
+	// NEWS (CLIENT)
+	router.HandleFunc("/api/news", GetPublishedNews).Methods("GET")
+	router.HandleFunc("/api/news/latest", GetLatestNews).Methods("GET")
+	router.HandleFunc("/api/news/{id}", GetNewsById).Methods("GET")
 
 	router.HandleFunc("/api/admin/theme", AdminThemeGetHandler).Methods("GET")
 	router.HandleFunc("/api/admin/theme", AdminThemeSetHandler).Methods("POST")
