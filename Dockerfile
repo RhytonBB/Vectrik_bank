@@ -1,4 +1,4 @@
-# Dockerfile
+# Dockerfile для backend
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./

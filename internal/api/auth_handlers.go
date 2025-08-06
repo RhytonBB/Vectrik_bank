@@ -120,7 +120,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		Domain:   ".vectrikbank.ru",
+		Domain:   "vectrikbank.ru",
 		MaxAge:   60 * 60 * 24,
 		Expires:  time.Now().Add(24 * time.Hour),
 	})

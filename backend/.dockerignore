@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Frontend
+vektrik-frontend/
+
+# Documentation
+*.md
+*.txt
+
+# Data files
+*.xlsx
+*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+secret.log
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Deployment
+deploy.sh
+ssl-setup.sh
+DEPLOYMENT.md 
