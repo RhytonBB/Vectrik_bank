@@ -23,6 +23,7 @@ type User struct {
     TelegramID       *int64    `gorm:"unique" json:"telegram_id"`
     Login            *string   `gorm:"unique" json:"login"`
     PasswordHash     *string   `json:"password_hash"`
+    AvatarURL        *string   `json:"avatar_url"` // URL аватарки пользователя
     IsRegistered     bool      `gorm:"default:false" json:"is_registered"`
     IsAdmin          bool      `gorm:"default:false" json:"is_admin"`
     Balance          int       `gorm:"default:0;not null" json:"balance"`

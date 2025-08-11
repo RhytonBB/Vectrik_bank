@@ -571,6 +571,78 @@ func AdminUserEditDeleteAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// API: Загрузка аватарки пользователя
+func AdminUserAvatarUploadAPIHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ParseJWT(cookie.Value)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	isAdmin, ok := claims["is_admin"].(bool)
+	if !ok || !isAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Парсим multipart форму
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
+		http.Error(w, "File too large", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем ID пользователя
+	userIDStr := r.FormValue("user_id")
+	if userIDStr == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	userID64, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+	userID := uint(userID64)
+
+	// Получаем файл
+	files := r.MultipartForm.File["avatar"]
+	if len(files) == 0 || files[0] == nil {
+		http.Error(w, "No avatar file uploaded", http.StatusBadRequest)
+		return
+	}
+
+	// Загружаем аватарку
+	avatarURL, err := services.UploadUserAvatar(userID, files[0])
+	if err != nil {
+		http.Error(w, "Ошибка загрузки аватарки: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Обновляем пользователя в базе
+	if err := services.UpdateUser(userID, map[string]interface{}{
+		"avatar_url": avatarURL,
+	}); err != nil {
+		http.Error(w, "Ошибка обновления пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"avatar_url": avatarURL,
+		"message":    "Аватарка успешно загружена",
+	})
+}
+
 func AdminUserAdjustBalanceAPIHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {

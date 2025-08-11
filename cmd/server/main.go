@@ -34,6 +34,9 @@ func main() {
 
 	// Обработчик статики для медиафайлов (баннеры, фото товаров и т.д.)
 	http.Handle("/internal/media/", http.StripPrefix("/internal/media/", http.FileServer(http.Dir("internal/media"))))
+	
+	// Обработчик статики для аватарок
+	http.Handle("/internal/media/avatars/", http.StripPrefix("/internal/media/avatars/", http.FileServer(http.Dir("internal/media/avatars"))))
 
 	port := os.Getenv("PORT")
 	if port == "" {

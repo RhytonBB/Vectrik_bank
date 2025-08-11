@@ -28,6 +28,7 @@ func RegisterRoutes() {
 	router.HandleFunc("/api/admin/users/{id}/unban", AdminUserUnbanAPIHandler).Methods("POST")
 	router.HandleFunc("/api/admin/users/{id}", AdminUserEditDeleteAPIHandler).Methods("PUT", "DELETE")
 	router.HandleFunc("/api/admin/users/adjust_balance", AdminUserAdjustBalanceAPIHandler).Methods("POST")
+	router.HandleFunc("/api/admin/users/avatar/upload", AdminUserAvatarUploadAPIHandler).Methods("POST")
 	// BULK USERS
 	router.HandleFunc("/api/admin/users/bulk/preview", AdminBulkUsersPreviewAPIHandler).Methods("POST")
 	router.HandleFunc("/api/admin/users/bulk", AdminBulkUsersRegisterAPIHandler).Methods("POST")

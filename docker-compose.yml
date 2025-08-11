@@ -21,7 +21,7 @@ services:
     expose:
       - "8080"
     environment:
-      DATABASE_URL: postgres://avnadmin:AVNS_hrZbDFPdnDzERfL9KsA@pg-3f0a4609-iosirotkin-fa7b.i.aivencloud.com:17491/defaultdb?sslmode=require
+      DATABASE_URL: postgres://avnadmin:AVNS_IDN09unUx_paadzPraE@replica-pg-18c4bab6-rhytonbb-5fb4.b.aivencloud.com:27720/defaultdb?sslmode=require
       PORT: 8080
       JWT_SECRET: твой_секретный_ключ
       BOT_TOKEN: 8082001071:AAGM0wpFF6L0vDh6Z91DetDhVjT81fqjri4
