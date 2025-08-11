@@ -283,5 +283,6 @@ func MeAPIHandler(w http.ResponseWriter, r *http.Request) {
 		"is_admin": user.IsAdmin,
 		"balance": user.Balance,
 		"account_number": user.AccountNumber,
+		"telegram_username": user.TelegramUsername,
 	})
 }

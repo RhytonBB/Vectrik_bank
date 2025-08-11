@@ -70,6 +70,20 @@ func GetNewsList(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Парсим изображения для каждой новости
+    for i := range news {
+        if news[i].Images != "" {
+            var images []db.NewsImage
+            json.Unmarshal([]byte(news[i].Images), &images)
+            // Создаем временную структуру с парсированными изображениями
+            imagesJSON, err := json.Marshal(images)
+            if err != nil {
+                continue // Пропускаем если ошибка парсинга
+            }
+            news[i].Images = string(imagesJSON)
+        }
+    }
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(news)
 }
@@ -83,6 +97,19 @@ func GetNewsById(w http.ResponseWriter, r *http.Request) {
     if err := db.DB.First(&news, id).Error; err != nil {
         http.Error(w, "News not found", http.StatusNotFound)
         return
+    }
+
+    // Парсим изображения
+    if news.Images != "" {
+        var images []db.NewsImage
+        json.Unmarshal([]byte(news.Images), &images)
+        // Создаем временную структуру с парсированными изображениями
+        imagesJSON, err := json.Marshal(images)
+        if err != nil {
+            // Если ошибка парсинга, оставляем оригинальную строку
+        } else {
+            news.Images = string(imagesJSON)
+        }
     }
 
     w.Header().Set("Content-Type", "application/json")

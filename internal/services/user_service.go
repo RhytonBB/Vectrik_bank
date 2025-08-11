@@ -158,7 +158,7 @@ func GetUserBalance(userID uint) (int, error) {
 
 func GetUserShortInfo(userID uint) (*db.User, error) {
     var user db.User
-    if err := db.DB.Select("id, first_name, last_name, is_admin, balance, account_number").Where("id = ?", userID).First(&user).Error; err != nil {
+    if err := db.DB.Select("id, first_name, last_name, is_admin, balance, account_number, telegram_username").Where("id = ?", userID).First(&user).Error; err != nil {
         return nil, err
     }
     return &user, nil

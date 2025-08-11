@@ -28,7 +28,7 @@ func AdminBannersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPost {
-		r.ParseMultipartForm(10 << 20)
+		r.ParseMultipartForm(100 << 20)
 		action := r.FormValue("action")
 		bannerID := r.FormValue("banner_id")
 		if action == "delete" && bannerID != "" {

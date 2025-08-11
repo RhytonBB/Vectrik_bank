@@ -49,7 +49,7 @@ func AdminBulkUsersPreviewAPIHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
 		http.Error(w, "File too large", http.StatusBadRequest)
 		return
 	}
